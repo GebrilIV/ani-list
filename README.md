@@ -1,20 +1,58 @@
-# AniList Slim Workspace
+# Anime Tracker – Gestionnaire de listes d’anime
 
-Ce projet est une base pour une application Slim PHP avec un frontend Vue.js simple.
+Anime Tracker est une application web locale moderne pour gérer vos listes d’anime, enrichie par l’API [AniList](https://anilist.co/). Elle permet d’ajouter, organiser, suivre la progression et explorer vos séries animées avec une interface claire et rapide.
 
-## Structure
+---
 
-- `public/` : Frontend statique (HTML, JS, CSS)
-- `backend/` : Backend Slim (routes, services, stockage)
+## 🚀 Lancer l’application
 
-## Lancer le backend
+1. **Démarrage du serveur local**
 
-```bash
-php -S localhost:8080 -t backend
-```
+   Depuis la racine du projet :
+   ```bash
+   ./start.sh
+   ```
+   (ou `bash start.sh` si besoin)
 
-## Lancer le frontend
-Ouvrez `public/index.html` dans votre navigateur.
+2. **Accéder à l’application**
 
+   Ouvrez votre navigateur à l’adresse :
+   - [http://localhost:8000/](http://localhost:8000/)
+   - Ou l’URL réseau affichée dans le terminal pour accès depuis un autre appareil
 
-*comment utilisé et plus a mettre
+---
+
+## ✨ Fonctionnalités principales
+
+- **Ajout rapide d’anime** avec auto-complétion via AniList
+- **Gestion de listes personnalisées** (création, édition, couleurs, description)
+- **Suivi précis de la progression** (épisode, minute, note, etc.)
+- **Fiches détaillées** pour chaque anime (image, synopsis, tags, statut…)
+- **Recherche avancée** et tri par dernier visionné
+- **Interface moderne** (SPA Vue.js, responsive, thème clair/sombre, footer dynamique)
+- **Stockage local** (aucune donnée envoyée en ligne)
+
+---
+
+## 🛠️ Stack technique
+
+- **Frontend :** Vue.js, HTML, CSS (SPA)
+- **Backend :** PHP (Slim 4), stockage JSON local
+- **API :** [AniList](https://anilist.co/) (données enrichies)
+
+---
+
+## 📄 Documentation & détails
+
+Pour plus d’informations sur la structure, les objectifs et les choix techniques, consultez :
+- [`PROJET.md`](./PROJET.md)
+
+---
+
+## 👤 Auteur
+
+Développé par [GebrilIV](https://github.com/GebrilIV)
+
+---
+
+© 2026 – Projet open source, usage personnel/local uniquement.

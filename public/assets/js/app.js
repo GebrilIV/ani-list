@@ -105,6 +105,11 @@ const app = new Vue({
                 .sort((a, b) => (b.id || 0) - (a.id || 0))
                 .slice(0, 3);
         },
+        doublonCount() {
+            const title = (this.animeFields.title || '').trim().toLowerCase();
+            if (!title) return 0;
+            return this.animes.filter(a => (a.title || '').trim().toLowerCase() === title).length;
+        },
     },
     methods: {
         async fetchAnimes() {
@@ -175,6 +180,10 @@ const app = new Vue({
             }
             if (!this.newAnimeListId) {
                 this.error = "Merci de sélectionner une liste.";
+                return;
+            }
+            if (this.doublonCount > 0) {
+                this.error = `${this.doublonCount} doublon${this.doublonCount > 1 ? 's' : ''} trouvé${this.doublonCount > 1 ? 's' : ''} : un anime du même nom existe déjà.`;
                 return;
             }
             try {
@@ -508,6 +517,7 @@ const app = new Vue({
                         </div>
                         <img v-if="animeSuggestionSelected && animeSuggestionSelected.image" :src="animeSuggestionSelected.image" alt="cover" style="width:48px; height:48px; object-fit:cover; border-radius:6px; margin-left:12px;" />
                     </div>
+                    <div v-if="doublonCount > 0" style="color:#d9534f; font-size:0.95em; margin-top:2px;">{{ doublonCount }} doublon{{ doublonCount > 1 ? 's' : '' }} trouvé{{ doublonCount > 1 ? 's' : '' }}</div>
                 </div>
                 <div class="create-list-section">
                     <label>Liste :</label>

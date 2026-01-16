@@ -161,12 +161,12 @@ debut creation page dedié a chaque anime
 
 # D5 - 16.01.26:
 ajout de 'autres' dans SPA des anime.
-debut system recherche
+system recherche
+system doublons
 
 
 
 
 
 
-
-a faire - teste, css mobil, meuilleur page aceuille, system recherche liste, dernier vu, footer, pas ajouter anime deja existant.
+a faire - teste, css mobil, meuilleur page aceuille, footer.
