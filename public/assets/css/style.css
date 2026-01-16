@@ -1,0 +1,215 @@
+/* Style principal pour AniList App */
+:root {
+  --color-bg: #f5f5f5;
+  --color-card: #fff;
+  --color-text: #222;
+  --color-header: #222;
+  --color-header-bg: #fff;
+  --color-accent: #4f8cff;
+}
+[data-theme="dark"] {
+  --color-bg: #181a1b;
+  --color-card: #23272a;
+  --color-text: #f5f5f5;
+  --color-header: #f5f5f5;
+  --color-header-bg: #23272a;
+  --color-accent: #4f8cff;
+}
+body { font-family: Arial, sans-serif; background: var(--color-bg); color: var(--color-text); margin: 0; padding: 0; }
+#app { max-width: 900px; margin: 40px auto; background: var(--color-card); border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); padding: 24px; }
+
+.main-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--color-header-bg);
+  color: var(--color-header);
+  padding: 10px 24px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.header-left input[type="text"] {
+  margin-left: 16px;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 1rem;
+  background: var(--color-card);
+  color: var(--color-text);
+  min-width: 140px;
+}
+.header-nav {
+  display: flex;
+  gap: 8px;
+  margin-left: 24px;
+}
+.nav-btn {
+  background: none;
+  border: none;
+  color: var(--color-header);
+  font-size: 1.1rem;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 8px 16px;
+  border-radius: 6px;
+  transition: background 0.2s, color 0.2s;
+}
+.nav-btn:hover, .nav-btn.active {
+  background: var(--color-accent);
+  color: #fff;
+}
+.header-title {
+  font-size: 1.5rem;
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+.header-right button {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--color-header);
+  transition: color 0.2s;
+}
+.header-right button:hover {
+  color: var(--color-accent);
+}
+/* Barre de recherche et boutons de listes */
+.search-bar {
+  display: flex;
+  gap: 12px;
+  margin: 24px 0 16px 0;
+  flex-wrap: wrap;
+}
+.search-bar input[type="text"] {
+  flex: 1 1 200px;
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 1rem;
+  background: var(--color-card);
+  color: var(--color-text);
+}
+.list-buttons {
+  display: flex;
+  gap: 8px;
+}
+.list-btn {
+  background: var(--color-accent);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.list-btn:hover {
+  background: #2563eb;
+}
+/* Responsive */
+@media (max-width: 600px) {
+  .main-header { flex-direction: column; align-items: flex-start; }
+  .header-title { font-size: 1.1rem; }
+  .logo-minimal { height: 28px; width: 28px; }
+  .search-bar { flex-direction: column; }
+  .header-left { flex-direction: column; gap: 4px; }
+  .header-nav { margin-left: 0; }
+  .header-left input[type="text"] { min-width: 100px; }
+}
+.logo-minimal {
+  height: 28px;
+  width: 28px;
+  object-fit: contain;
+  border-radius: 8px;
+  background: #fff2;
+  margin-right: 4px;
+  cursor: pointer;
+}
+.logo-minimal, .header-title {
+  cursor: pointer;
+}
+.anime-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.anime-card {
+  background: #fafafa;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 12px;
+  min-width: 160px;
+  max-width: 180px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+[data-theme="dark"] .anime-card { background: #23272a; border: 1px solid #333; }
+.anime-card img {
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+.list-cards {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.list-card {
+  background: var(--color-card);
+  border: 1.5px solid var(--color-accent);
+  border-radius: 8px;
+  padding: 18px 32px;
+  min-width: 120px;
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: var(--color-accent);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  transition: background 0.2s, color 0.2s;
+  cursor: pointer;
+}
+.list-card:hover {
+  background: var(--color-accent);
+  color: #fff;
+}
+.modal-create-list {
+  background: var(--color-card);
+  border-radius: 10px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.10);
+  max-width: 420px;
+  margin: 32px auto;
+  padding: 32px 28px 24px 28px;
+  border: 1.5px solid var(--color-accent);
+}
+.create-list-section {
+  margin-bottom: 18px;
+}
+.create-list-section label {
+  font-weight: 500;
+  display: block;
+  margin-bottom: 4px;
+}
+.create-list-section input[type="text"],
+.create-list-section select {
+  width: 100%;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 1rem;
+  background: var(--color-bg);
+  color: var(--color-text);
+  margin-bottom: 4px;
+}
