@@ -163,10 +163,11 @@ debut creation page dedié a chaque anime
 ajout de 'autres' dans SPA des anime.
 system recherche
 system doublons
+github repository
+
+# D6 - 17.01.26:
 
 
 
 
-
-
-a faire - teste, css mobil, meuilleur page aceuille, footer.
+a faire - teste, css mobil, meuilleur page aceuille, footer, limiter requete API (eco), suprimer anime et liste.

@@ -8,11 +8,19 @@ Anime Tracker est une application web locale moderne pour gérer vos listes d’
 
 1. **Démarrage du serveur local**
 
-   Depuis la racine du projet :
-   ```bash
-   ./start.sh
-   ```
-   (ou `bash start.sh` si besoin)
+   - **Sur Linux/MacOS :**
+     ```bash
+     ./start.sh
+     ```
+     (ou `bash start.sh` si besoin)
+
+   - **Sur Windows :**
+     Double-cliquez sur `start.bat` ou exécutez dans un terminal :
+     ```cmd
+     start.bat
+     ```
+
+   > **Note :** Assurez-vous que PHP est installé et ajouté au PATH. Vous pouvez télécharger PHP depuis [php.net](https://www.php.net/downloads).
 
 2. **Accéder à l’application**
 
