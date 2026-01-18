@@ -165,8 +165,8 @@ system recherche
 system doublons
 github repository
 
-# D6 - 17.01.26:
-
+# D6 - 18.01.26:
+license
 
 
 

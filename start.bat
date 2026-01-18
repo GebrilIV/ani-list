@@ -6,24 +6,17 @@ REM ===== Configuration =====
 set PORT=8000
 set ROOT=public
 
-REM Dossier courant
-set DIR=%cd%
-
-REM Récupération de l'IP locale (IPv4)
-for /f "tokens=2 delims=:" %%A in ('ipconfig ^| findstr /c:"IPv4"') do (
-    set IP=%%A
-    goto :ipfound
+REM Vérifier si PHP est disponible
+php -v >nul 2>&1
+if errorlevel 1 (
+    echo Erreur : PHP n'est pas installé ou n'est pas dans le PATH.
+    pause
+    exit /b
 )
 
-:ipfound
-set IP=%IP: =%
-
-echo 📂 Serveur lancé dans le dossier : %DIR%\%ROOT%
+REM Lancer le serveur PHP
+echo 📂 Serveur lancé dans le dossier : %cd%\%ROOT%
 echo 🌐 URL locale :   http://localhost:%PORT%/
-echo 📱 URL réseau :   http://%IP%:%PORT%/
-echo 🔧 Appuie sur CTRL+C pour arrêter.
-echo.
-
+echo 🔧 Appuyez sur CTRL+C pour arrêter le serveur.
 php -S 0.0.0.0:%PORT% -t %ROOT%
-
 pause

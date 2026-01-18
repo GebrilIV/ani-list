@@ -59,8 +59,8 @@ Pour plus d’informations sur la structure, les objectifs et les choix techniqu
 
 ## 👤 Auteur
 
-Développé par [GebrilIV](https://github.com/GebrilIV)
+Développé par [GebrilIV](https://github.com/GebrilIV) & [Copilot](https://github.com/copilot)
 
 ---
 
-© 2026 – Projet open source, usage personnel/local uniquement.
+© 2026 – Apache License Version 2.0.
