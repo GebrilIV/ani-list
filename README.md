@@ -2,10 +2,7 @@
 
 ## 📌 À quoi sert cette branche ?
 
-Cette branche a été créée pour les **utilisateurs Windows** qui :
-
-* ne savent pas installer PHP
-* ou autres...
+Cette branche a été créée pour les **utilisateurs Windows** qui n'ont pas php d'installer sur leur apareille.
 
 Elle permet de **lancer le projet sans installer PHP**, en utilisant une version portable déjà incluse.
 
