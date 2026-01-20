@@ -36,7 +36,7 @@ Cette branche contient **uniquement** :
 ### 2️⃣ Copier les fichiers dans le projet principal
 
 1. Ouvrez le dossier du projet principal (`ani-list`)
-2. Copiez **tous les fichiers et dossiers** de la branche **php-win** a la racine du projet principal
+2. Copiez **le dossier php** et **start.bat** de la branche **php-win** a la racine du projet principal
 3. Collez-les **à la racine du projet principal**
 4. **Écrasez les fichiers existants** si Windows le demande
 
