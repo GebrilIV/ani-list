@@ -168,6 +168,14 @@ github repository
 # D6 - 18.01.26:
 license
 
+# D7 - 20.01.26:
+modif readme
+modif vers. php win
+issues
 
 
-a faire - teste, css mobil, meuilleur page aceuille, footer, limiter requete API (eco), suprimer anime et liste.
+
+
+
+a faire - voir issues
+
