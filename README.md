@@ -27,7 +27,7 @@ Anime List est une application simple et rapide pour gérer vos listes d’anime
 
    Ouvrez votre navigateur à l’adresse :
    - [http://localhost:8000/](http://localhost:8000/)
-   - Ou l’URL réseau affichée dans le terminal pour accès depuis un autre appareil
+   - Ou '{ip}:8000' pour aussi accès depuis un autre appareil
 
 ---
 

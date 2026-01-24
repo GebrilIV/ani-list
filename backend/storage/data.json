@@ -33,7 +33,8 @@
                 "episode": 7,
                 "minute": 3,
                 "other1": "",
-                "last_view": 1768589598
+                "last_view": 1768589598,
+                "status": "completed"
             },
             "status": "FINISHED",
             "season": 2,
@@ -45,7 +46,7 @@
             "description": "A new adaption of the manga of the same name by Togashi Yoshihiro.\nA Hunter is one who travels the world doing all sorts of dangerous tasks. From capturing criminals to searching deep within uncharted lands for any lost treasures. Gon is a young boy whose father disappeared long ago, being a Hunter. He believes if he could also follow his father's path, he could one day reunite with him.\nAfter becoming 12, Gon leaves his home and takes on the task of entering the Hunter exam, notorious for its low success rate and high probability of death to become an official Hunter. He befriends the revenge-driven Kurapika, the doctor-to-be Leorio and the rebellious ex-assassin Killua in the exam, with their friendship prevailing throughout the many trials and threats they come upon taking on the dangerous career of a Hunter.",
             "pics": "https:\/\/s4.anilist.co\/file\/anilistcdn\/media\/anime\/cover\/medium\/bx11061-y5gsT1hoHuHw.png",
             "star": "4.5",
-            "last_view": 1768589598
+            "last_view": 1769295222
         },
         {
             "id": 3,
@@ -118,6 +119,55 @@
             "star": "4.0",
             "last_view": 1768581380,
             "other1": "111"
+        },
+        {
+            "id": 6,
+            "id_anilist": 120700,
+            "title": "Re:Zero kara Hajimeru Kyuukei Jikan (Break Time) 2nd Season",
+            "title_romaji": "Re:Zero kara Hajimeru Kyuukei Jikan (Break Time) 2nd Season",
+            "episodes": 13,
+            "progress": {
+                "episode": 7,
+                "minute": 0,
+                "status": "rewatch_dropped",
+                "other1": ""
+            },
+            "status": "FINISHED",
+            "season": 1,
+            "tags": [
+                "Adventure",
+                "Comedy",
+                "Fantasy"
+            ],
+            "description": "The second season of Re:Zero kara Hajimeru Kyuukei Jikan (Break Time).",
+            "pics": "https:\/\/s4.anilist.co\/file\/anilistcdn\/media\/anime\/cover\/medium\/b120700-buuy9COgsBTa.jpg",
+            "star": "3.4",
+            "last_view": 1769296279,
+            "other1": "",
+            "my_star": 5
+        },
+        {
+            "id": 7,
+            "id_anilist": 140111,
+            "title": "Kizuna - In eternal remembrance of March 11, 2011",
+            "title_romaji": "Kizuna - In eternal remembrance of March 11, 2011",
+            "episodes": 1,
+            "progress": {
+                "episode": 0,
+                "minute": 0,
+                "status": "rewatch_planned"
+            },
+            "status": "FINISHED",
+            "season": 1,
+            "tags": [
+                "Drama"
+            ],
+            "description": "A story passed on is a living memorial.\nIn eternal remembrance of March 11, 2011.\n\n(Source: Official Website)",
+            "pics": "https:\/\/s4.anilist.co\/file\/anilistcdn\/media\/anime\/cover\/medium\/b140111-FTdUW2VyLwW4.png",
+            "star": "2.7",
+            "my_star": null,
+            "last_view": 1769296222,
+            "other1": ""
         }
     ],
     "lists": [
@@ -137,6 +187,22 @@
                 },
                 {
                     "id": 5
+                }
+            ]
+        },
+        {
+            "id": 2,
+            "order": 2,
+            "code1": 0,
+            "name": "tette",
+            "color": "#4f8cff",
+            "description": "123",
+            "animes": [
+                {
+                    "id": 6
+                },
+                {
+                    "id": 7
                 }
             ]
         }

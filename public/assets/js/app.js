@@ -2,36 +2,39 @@
 const app = new Vue({
     el: '#app',
     data: {
-        currentView: 'home', // 'home', 'list', 'discover'
-        animes: [], // Liste locale
-        search: '',
-        searchResults: [], // Résultats AniList
-        loading: false,
-        error: '',
-        lists: [
+        currentView: 'home', // Vue actuelle ('home', 'list', 'discover')
+        animes: [], // Liste des animes
+        search: '', // Barre de recherche
+        searchResults: [], // Résultats de recherche AniList
+        loading: false, // Indicateur de chargement
+        error: '', // Message d'erreur
+        lists: [ // Listes d'animes
             { id: 1, name: 'Favoris' },
             { id: 2, name: 'À voir' },
             { id: 3, name: 'Terminé' }
         ],
-        selectedList: 1,
-        newListName: '',
-        newListColor: '#4f8cff',
-        newListDescription: '',
-        listSearch: '',
-        listSort: 'lastview', // 'lastview', 'alpha', etc.
-        listDetailId: null, // id de la liste sélectionnée pour la vue détail
-        newAnimeName: '',
-        newAnimeSeason: '',
-        newAnimeEpisode: '',
-        newAnimeMinute: '',
-        animeSuggestions: [],
-        animeSuggestionLoading: false,
-        animeSuggestionSelected: null, // {id, title, image, ...}
-        animeSuggestionError: '',
-        animeSuggestionDropdown: false,
-        newAnimeListId: null, // ID de la liste sélectionnée pour l'ajout d'un anime
-        animeInfo: null, // Stocke les infos détaillées de l'anime sélectionné
-        animeFields: {
+        selectedList: 1, // Liste sélectionnée
+        newListName: '', // Nom pour une nouvelle liste
+        newListColor: '#4f8cff', // Couleur de la nouvelle liste
+        newListDescription: '', // Description de la nouvelle liste
+        listSearch: '', // Recherche dans une liste
+        listSort: 'lastview', // Tri des listes ('lastview', 'alpha')
+        // Recherche avancée (listDetail)
+        listAdvancedOpen: false, // Afficher/masquer filtres
+        listStatusFilters: [], // Filtre sur progress.status
+        listDetailId: null, // ID de la liste en détail
+        newAnimeName: '', // Nom du nouvel anime
+        newAnimeSeason: '', // Saison du nouvel anime
+        newAnimeEpisode: '', // Épisode du nouvel anime
+        newAnimeMinute: '', // Minute de l'épisode
+        animeSuggestions: [], // Suggestions d'animes
+        animeSuggestionLoading: false, // Chargement des suggestions
+        animeSuggestionSelected: null, // Suggestion sélectionnée
+        animeSuggestionError: '', // Erreur dans les suggestions
+        animeSuggestionDropdown: false, // Dropdown des suggestions
+        newAnimeListId: null, // ID de la liste pour ajout
+        animeInfo: null, // Infos détaillées d'un anime
+        animeFields: { // Champs pour un nouvel anime
             id_anilist: '',
             title: '',
             title_romaji: '',
@@ -41,24 +44,43 @@ const app = new Vue({
             tags: '',
             pics: '',
             description: '',
-            other1: '' // Champ texte libre
+            other1: '' // Champ libre
         },
-        selectedAnimeId: null,
-        previousListId: null,
-        editProgressMode: false,
-        editProgressEpisode: 0,
-        editProgressMinute: 0,
-        editOther1: '', // Pour édition du champ autres
+        selectedAnimeId: null, // ID de l'anime sélectionné
+        previousListId: null, // Liste précédente
+        editProgressMode: false, // Mode édition progression
+        editProgressEpisode: 0, // Épisode en édition
+        editProgressMinute: 0, // Minute en édition
+        // Statut de visionnage (perso)
+        progressStatusOptions: [
+            { value: 'watching', label: 'Watching' },
+            { value: 'completed', label: 'Completed' },
+            { value: 'on_hold', label: 'On hold' },
+            { value: 'dropped', label: 'Dropped' },
+            { value: 'plan_to_watch', label: 'Plan to watch' },
+            { value: 'rewatching', label: 'Rewatching' },
+            { value: 'rewatch_on_hold', label: 'Rewatch (on hold)' },
+            { value: 'rewatch_dropped', label: 'Rewatch (dropped)' },
+            { value: 'rewatch_planned', label: 'Rewatch (planned)' },
+        ],
+        newAnimeProgressStatus: 'plan_to_watch', // Statut à l'ajout
+        editProgressStatus: 'watching', // Statut en édition
+        editTitle: '', // Titre en édition
+        editDescription: '', // Synopsis en édition
+        // Note perso
+        editMyStarMode: false, // Mode édition note perso
+        editMyStarValue: null, // Valeur note perso
+        editOther1: '', // Édition champ libre
     },
     computed: {
-        filteredAnimes() {
+        filteredAnimes() { // Animes filtrés par recherche
             if (!this.search) return this.animes;
             return this.animes.filter(a => a.title.toLowerCase().includes(this.search.toLowerCase()));
         },
-        currentListDetail() {
+        currentListDetail() { // Détails de la liste actuelle
             return this.lists.find(l => l.id === this.listDetailId) || null;
         },
-        currentListAnimes() {
+        currentListAnimes() { // Animes de la liste actuelle
             if (!this.currentListDetail) return [];
             // Si la liste utilise 'animes' (nouveau format)
             if (Array.isArray(this.currentListDetail.animes)) return this.currentListDetail.animes;
@@ -68,11 +90,20 @@ const app = new Vue({
             }
             return [];
         },
-        filteredListAnimes() {
+        filteredListAnimes() { // Animes filtrés dans la liste
             // Transforme les références en objets anime complets
             let arr = this.currentListAnimes
                 .map(ref => this.getAnime(ref.id || ref))
                 .filter(a => a && a.id);
+
+            // Filtre statut (progress.status)
+            if (Array.isArray(this.listStatusFilters) && this.listStatusFilters.length > 0) {
+                arr = arr.filter(a => {
+                    const st = (a.progress && a.progress.status) ? a.progress.status : 'plan_to_watch';
+                    return this.listStatusFilters.includes(st);
+                });
+            }
+
             if (this.listSearch) {
                 const search = this.listSearch.toLowerCase();
                 arr = arr.filter(a => {
@@ -90,29 +121,40 @@ const app = new Vue({
             }
             return arr;
         },
-        isDarkTheme() {
+        isDarkTheme() { // Thème sombre activé ?
             return (typeof window !== 'undefined' && window.document && window.document.documentElement.getAttribute('data-theme') === 'dark');
         },
-        lastViewedAnimes() {
+        lastViewedAnimes() { // Derniers animes vus
             return this.animes
                 .filter(a => a.last_view)
                 .sort((a, b) => (b.last_view || 0) - (a.last_view || 0))
                 .slice(0, 3);
         },
-        recentAnimes() {
+        recentAnimes() { // Animes récents
             return this.animes
                 .filter(a => a.id)
                 .sort((a, b) => (b.id || 0) - (a.id || 0))
                 .slice(0, 3);
         },
-        doublonCount() {
+        doublonCount() { // Compte des doublons
             const title = (this.animeFields.title || '').trim().toLowerCase();
             if (!title) return 0;
             return this.animes.filter(a => (a.title || '').trim().toLowerCase() === title).length;
         },
     },
     methods: {
-        async fetchAnimes() {
+        progressStatusLabel(value) { // Label statut (perso)
+            const v = (value || '').toString();
+            const opt = this.progressStatusOptions.find(o => o.value === v);
+            return opt ? opt.label : (v || '—');
+        },
+        formatMyStar(value) { // Format note perso
+            if (value === null || typeof value === 'undefined' || value === '') return '—';
+            const n = Number(value);
+            if (Number.isNaN(n)) return '—';
+            return n.toFixed(1);
+        },
+        async fetchAnimes() { // Charger les animes
             try {
                 this.loading = true;
                 this.animes = await fetchAnimeList();
@@ -122,7 +164,7 @@ const app = new Vue({
                 this.loading = false;
             }
         },
-        async searchAniList() {
+        async searchAniList() { // Rechercher sur AniList
             if (!this.search) { this.searchResults = []; return; }
             this.loading = true;
             try {
@@ -141,7 +183,7 @@ const app = new Vue({
                 this.loading = false;
             }
         },
-        async fetchLists() {
+        async fetchLists() { // Charger les listes
             try {
                 const res = await fetch('/lists');
                 this.lists = await res.json();
@@ -149,7 +191,7 @@ const app = new Vue({
                 this.error = 'Erreur lors du chargement des listes';
             }
         },
-        async handleCreateList() {
+        async handleCreateList() { // Créer une nouvelle liste
             if (!this.newListName.trim()) {
                 this.error = 'Le nom de la liste est requis.';
                 return;
@@ -172,7 +214,7 @@ const app = new Vue({
                 this.loading = false;
             }
         },
-        async handleAddAnime() {
+        async handleAddAnime() { // Ajouter un nouvel anime
             // Vérifie que les champs essentiels sont remplis
             if (!this.animeFields.id_anilist || !this.animeFields.title) {
                 this.error = "Merci de cliquer sur la loupe pour récupérer les infos de l'anime avant de valider.";
@@ -202,6 +244,7 @@ const app = new Vue({
                     season: this.newAnimeSeason ? parseInt(this.newAnimeSeason) : 1,
                     episode: this.newAnimeEpisode ? parseInt(this.newAnimeEpisode) : 0,
                     minute: this.newAnimeMinute ? parseInt(this.newAnimeMinute) : 0,
+                    progress_status: this.newAnimeProgressStatus,
                     listId: this.newAnimeListId,
                     other1: this.animeFields.other1 || ''
                 };
@@ -212,6 +255,7 @@ const app = new Vue({
                 this.newAnimeSeason = '';
                 this.newAnimeEpisode = '';
                 this.newAnimeMinute = '';
+                this.newAnimeProgressStatus = 'plan_to_watch';
                 this.animeSuggestionSelected = null;
                 Object.keys(this.animeFields).forEach(k => this.animeFields[k] = '');
                 this.newAnimeListId = null;
@@ -222,10 +266,10 @@ const app = new Vue({
                 this.loading = false;
             }
         },
-        selectList(id) {
+        selectList(id) { // Sélectionner une liste
             this.selectedList = id;
         },
-        setView(view, animeId = null, listId = null) {
+        setView(view, animeId = null, listId = null) { // Changer de vue
             this.currentView = view;
             if (view === 'animeDetail') {
                 this.selectedAnimeId = animeId;
@@ -235,22 +279,37 @@ const app = new Vue({
                 this.listDetailId = listId;
             }
         },
-        goHome() {
+        goHome() { // Retour à l'accueil
             this.currentView = 'home';
         },
-        toggleTheme() {
+        toggleTheme() { // Changer le thème (clair/sombre)
             const current = document.documentElement.getAttribute('data-theme') || 'light';
             const next = current === 'light' ? 'dark' : 'light';
             document.documentElement.setAttribute('data-theme', next);
             localStorage.setItem('theme', next);
         },
-        openListDetail(id) {
+        openListDetail(id) { // Ouvrir les détails d'une liste
             this.listDetailId = id;
             this.listSearch = '';
             this.listSort = 'lastview';
+            this.listAdvancedOpen = false;
+            this.listStatusFilters = [];
             this.setView('listDetail');
         },
-        async fetchAnimeSuggestions() {
+        toggleListAdvanced() { // Toggle recherche avancée
+            this.listAdvancedOpen = !this.listAdvancedOpen;
+        },
+        toggleListStatusFilter(status) { // Toggle filtre statut
+            const s = (status || '').toString();
+            const idx = this.listStatusFilters.indexOf(s);
+            if (idx === -1) this.listStatusFilters.push(s);
+            else this.listStatusFilters.splice(idx, 1);
+        },
+        clearListFilters() { // Reset filtres recherche
+            this.listSearch = '';
+            this.listStatusFilters = [];
+        },
+        async fetchAnimeSuggestions() { // Suggestions d'animes
             const q = this.newAnimeName.trim();
             if (q.length < 2) { this.animeSuggestions = []; this.animeSuggestionDropdown = false; return; }
             this.animeSuggestionLoading = true;
@@ -274,7 +333,7 @@ const app = new Vue({
                 this.animeSuggestionLoading = false;
             }
         },
-        async fetchAnimeInfo() {
+        async fetchAnimeInfo() { // Infos détaillées d'un anime
             const q = this.newAnimeName.trim();
             if (!q) return;
             this.animeSuggestionLoading = true;
@@ -306,7 +365,7 @@ const app = new Vue({
                 this.animeSuggestionLoading = false;
             }
         },
-        selectAnimeSuggestion(s) {
+        selectAnimeSuggestion(s) { // Sélectionner une suggestion d'anime
             this.newAnimeName = s.title.romaji;
             this.animeSuggestionSelected = {
                 id: s.id,
@@ -318,20 +377,20 @@ const app = new Vue({
             // Appelle fetchAnimeInfo pour remplir animeFields à partir du nom sélectionné
             this.fetchAnimeInfo();
         },
-        clearAnimeSuggestion() {
+        clearAnimeSuggestion() { // Effacer la suggestion d'anime
             this.animeSuggestionSelected = null;
         },
-        handleAnimeInputBlur() {
+        handleAnimeInputBlur() { // Gérer la perte de focus sur le champ d'anime
             window.setTimeout(() => {
                 this.animeSuggestionDropdown = false;
             }, 200);
         },
-        formatLastView(ts) {
+        formatLastView(ts) { // Formater la dernière vue
             if (!ts) return 'Jamais';
             const d = new Date(ts * 1000);
             return d.toLocaleDateString('fr-FR') + ' ' + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
         },
-        getAnime(id) {
+        getAnime(id) { // Obtenir un anime par ID
             const anime = this.animes.find(a => a.id === id) || {};
             // Supprime last_view dans progress si présent
             if (anime.progress && typeof anime.progress.last_view !== 'undefined') {
@@ -339,20 +398,53 @@ const app = new Vue({
             }
             return anime;
         },
-        startEditProgress() {
+        startEditProgress() { // Démarrer l'édition de la progression
             const anime = this.getAnime(this.selectedAnimeId);
             this.editProgressEpisode = anime.progress && anime.progress.episode ? anime.progress.episode : 0;
             this.editProgressMinute = anime.progress && anime.progress.minute ? anime.progress.minute : 0;
+            this.editProgressStatus = (anime.progress && anime.progress.status) ? anime.progress.status : 'watching';
+            this.editTitle = anime.title || '';
+            this.editDescription = anime.description || '';
+            // reset note perso (évite confusion)
+            this.editMyStarMode = false;
             // Cherche other1 dans progress, puis à la racine
             this.editOther1 = (anime.progress && typeof anime.progress.other1 !== 'undefined')
                 ? anime.progress.other1
                 : (anime.other1 || '');
             this.editProgressMode = true;
         },
-        cancelEditProgress() {
+        startEditMyStar() { // Edit note perso
+            const anime = this.getAnime(this.selectedAnimeId);
+            const v = (anime && typeof anime.my_star !== 'undefined') ? anime.my_star : null;
+            this.editMyStarValue = (v === null || typeof v === 'undefined' || v === '') ? null : Number(v);
+            this.editMyStarMode = true;
+        },
+        cancelEditMyStar() { // Cancel note perso
+            this.editMyStarMode = false;
+        },
+        async saveEditMyStar() { // Save note perso
+            const idx = this.animes.findIndex(a => a.id === this.selectedAnimeId);
+            if (idx === -1) return;
+            const val = (this.editMyStarValue === null || this.editMyStarValue === '' || typeof this.editMyStarValue === 'undefined')
+                ? null
+                : Number(this.editMyStarValue);
+
+            // UI update optimiste
+            this.animes[idx].my_star = (val === null || Number.isNaN(val)) ? null : val;
+
+            try {
+                await patchAnime(this.selectedAnimeId, { my_star: this.animes[idx].my_star });
+                await this.fetchAnimes();
+            } catch (e) {
+                this.error = 'Erreur lors de la sauvegarde de la note perso';
+            } finally {
+                this.editMyStarMode = false;
+            }
+        },
+        cancelEditProgress() { // Annuler l'édition de la progression
             this.editProgressMode = false;
         },
-        async saveEditProgress() {
+        async saveEditProgress() { // Sauvegarder la progression éditée
             // Met à jour l'anime dans this.animes
             const idx = this.animes.findIndex(a => a.id === this.selectedAnimeId);
             if (idx !== -1) {
@@ -360,14 +452,22 @@ const app = new Vue({
                 this.animes[idx].progress.episode = this.editProgressEpisode;
                 this.animes[idx].progress.minute = this.editProgressMinute;
                 this.animes[idx].progress.other1 = this.editOther1;
+                this.animes[idx].progress.status = this.editProgressStatus;
+                this.animes[idx].title = this.editTitle;
+                this.animes[idx].description = this.editDescription;
                 // Met à jour last_view avec la date/heure/minute actuelle
                 this.animes[idx].last_view = Math.floor(Date.now() / 1000);
                 // Enregistre dans data.json via l'API PATCH
                 try {
-                    await updateAnimeProgress(this.selectedAnimeId, {
-                        episode: this.editProgressEpisode,
-                        minute: this.editProgressMinute,
-                        other1: this.editOther1, // sera stocké dans progress.other1
+                    await patchAnime(this.selectedAnimeId, {
+                        title: this.editTitle,
+                        description: this.editDescription,
+                        progress: {
+                            episode: this.editProgressEpisode,
+                            minute: this.editProgressMinute,
+                            other1: this.editOther1,
+                            status: this.editProgressStatus,
+                        },
                         last_view: this.animes[idx].last_view
                     });
                     // Recharge la liste des animes pour être sûr
@@ -378,7 +478,7 @@ const app = new Vue({
             }
             this.editProgressMode = false;
         },
-        showAnimeDetail(id) {
+        showAnimeDetail(id) { // Afficher les détails d'un anime
             this.selectedAnimeId = id;
             this.currentView = 'animeDetail';
         }
@@ -533,6 +633,28 @@ const app = new Vue({
                         <input type="number" v-model="newAnimeMinute" min="0" placeholder="Minute" style="width:90px;" />
                     </div>
                 </div>
+                <div class="create-list-section">
+                    <label>Statut (visionnage) :</label>
+                    <div style="display:flex; flex-wrap:wrap; gap:6px;">
+                        <button
+                            v-for="opt in progressStatusOptions"
+                            :key="opt.value"
+                            type="button"
+                            @click="newAnimeProgressStatus = opt.value"
+                            :style="{
+                                padding: '6px 10px',
+                                borderRadius: '999px',
+                                border: '1px solid ' + (newAnimeProgressStatus === opt.value ? '#4f8cff' : '#ccc'),
+                                background: newAnimeProgressStatus === opt.value ? '#4f8cff' : (isDarkTheme ? '#23272a' : '#fff'),
+                                color: newAnimeProgressStatus === opt.value ? '#fff' : (isDarkTheme ? '#f5f5f5' : '#23272a'),
+                                cursor: 'pointer',
+                                fontSize: '0.95rem'
+                            }"
+                        >
+                            {{ opt.label }}
+                        </button>
+                    </div>
+                </div>
                 <!-- Bloc info sur l'anime -->
                 <div :style="{
                     margin: '24px 0 0 0',
@@ -571,6 +693,45 @@ const app = new Vue({
                     <option value="lastview">Dernier vu</option>
                     <option value="alpha">Ordre alphabétique</option>
                 </select>
+                <button class="list-btn" type="button" @click="toggleListAdvanced" :style="{ background: listAdvancedOpen ? '#4f8cff' : undefined }">
+                    Recherche avancée
+                </button>
+                <button v-if="listSearch || (listStatusFilters && listStatusFilters.length)" class="list-btn" type="button" @click="clearListFilters" style="background:#eee; color:#222;">
+                    Reset
+                </button>
+            </div>
+
+            <div v-if="listAdvancedOpen" :style="{
+                marginBottom: '16px',
+                padding: '12px',
+                borderRadius: '10px',
+                border: '1px solid ' + (isDarkTheme ? '#2f3438' : '#ddd'),
+                background: isDarkTheme ? '#23272a' : '#fafafa',
+                color: isDarkTheme ? '#f5f5f5' : '#23272a'
+            }">
+                <div style="font-weight:600; margin-bottom:8px;">Filtres</div>
+                <div style="font-size:0.95rem; color:#888; margin-bottom:10px;">
+                    Statut (progress)
+                </div>
+                <div style="display:flex; flex-wrap:wrap; gap:6px;">
+                    <button
+                        v-for="opt in progressStatusOptions"
+                        :key="'list-filter-' + opt.value"
+                        type="button"
+                        @click="toggleListStatusFilter(opt.value)"
+                        :style="{
+                            padding: '6px 10px',
+                            borderRadius: '999px',
+                            border: '1px solid ' + (listStatusFilters.includes(opt.value) ? '#4f8cff' : (isDarkTheme ? '#3a3f44' : '#ccc')),
+                            background: listStatusFilters.includes(opt.value) ? '#4f8cff' : (isDarkTheme ? '#1f2326' : '#fff'),
+                            color: listStatusFilters.includes(opt.value) ? '#fff' : (isDarkTheme ? '#f5f5f5' : '#23272a'),
+                            cursor: 'pointer',
+                            fontSize: '0.95rem'
+                        }"
+                    >
+                        {{ opt.label }}
+                    </button>
+                </div>
             </div>
             <div class="list-detail-animes">
                 <div v-if="filteredListAnimes.length === 0" style="color:#888;">Aucun anime dans cette liste.</div>
@@ -604,10 +765,43 @@ const app = new Vue({
                 <div style="display:flex; align-items:flex-start; gap:24px; margin-bottom:24px;">
                     <img :src="getAnime(selectedAnimeId).pics" alt="cover" style="width:180px; height:260px; object-fit:cover; border-radius:12px; box-shadow:0 2px 12px rgba(0,0,0,0.10);" />
                     <div>
-                        <div style="font-size:2rem; font-weight:bold;">{{ getAnime(selectedAnimeId).title }}</div>
+                        <div style="font-size:2rem; font-weight:bold;">
+                            <span v-if="!editProgressMode">{{ getAnime(selectedAnimeId).title }}</span>
+                            <span v-else>
+                                <input type="text" v-model="editTitle" style="width:90%; font-size:1.25rem; padding:6px 10px; border-radius:8px; border:1px solid #ccc;" />
+                            </span>
+                        </div>
                         <div style="font-size:1.2rem; color:#888; margin-bottom:12px;">{{ getAnime(selectedAnimeId).title_romaji }}</div>
                         <div style="margin-bottom:12px; color:#555;">
-                            {{ getAnime(selectedAnimeId).description }}
+                            <span v-if="!editProgressMode">{{ getAnime(selectedAnimeId).description }}</span>
+                            <span v-else>
+                                <textarea v-model="editDescription" rows="5" style="width:92%; border-radius:8px; border:1px solid #ccc; padding:8px; font-size:1rem;"></textarea>
+                            </span>
+                        </div>
+                        <div style="margin-bottom:12px;">
+                            <span style="font-weight:600; color:#888;">Statut :</span>
+                            <span v-if="!editProgressMode">{{ progressStatusLabel(getAnime(selectedAnimeId).progress && getAnime(selectedAnimeId).progress.status) }}</span>
+                            <span v-else>
+                                <div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:6px;">
+                                    <button
+                                        v-for="opt in progressStatusOptions"
+                                        :key="opt.value"
+                                        type="button"
+                                        @click="editProgressStatus = opt.value"
+                                        :style="{
+                                            padding: '6px 10px',
+                                            borderRadius: '999px',
+                                            border: '1px solid ' + (editProgressStatus === opt.value ? '#4f8cff' : '#ccc'),
+                                            background: editProgressStatus === opt.value ? '#4f8cff' : (isDarkTheme ? '#23272a' : '#fff'),
+                                            color: editProgressStatus === opt.value ? '#fff' : (isDarkTheme ? '#f5f5f5' : '#23272a'),
+                                            cursor: 'pointer',
+                                            fontSize: '0.95rem'
+                                        }"
+                                    >
+                                        {{ opt.label }}
+                                    </button>
+                                </div>
+                            </span>
                         </div>
                         <div style="margin-bottom:12px;">
                             <span style="font-weight:600; color:#888;">Autres :</span>
@@ -619,7 +813,20 @@ const app = new Vue({
                         <div style="margin-bottom:8px;">
                             <span v-for="tag in getAnime(selectedAnimeId).tags" :key="tag" style="display:inline-block; background:#e0e7ff; color:#2d3a5a; border-radius:6px; padding:2px 10px; margin-right:6px; font-size:0.95rem;">{{ tag }}</span>
                         </div>
-                        <div style="margin-bottom:8px; font-size:1.1rem;">⭐ {{ getAnime(selectedAnimeId).star }} / 5</div>
+                        <div style="margin-bottom:8px; font-size:1.1rem;">⭐ Internet : {{ getAnime(selectedAnimeId).star }} / 5</div>
+                        <div style="margin-bottom:10px; font-size:1.05rem;">
+                            <span style="font-weight:600; color:#888;">Ma note :</span>
+                            <span v-if="!editMyStarMode" style="margin-left:6px;">
+                                {{ formatMyStar(getAnime(selectedAnimeId).my_star) }} / 5
+                                <span @click="startEditMyStar" style="color:#4f8cff; cursor:pointer; margin-left:10px; font-size:0.98rem;">noter</span>
+                            </span>
+                            <span v-else style="margin-left:6px;">
+                                <input type="number" v-model.number="editMyStarValue" min="0" max="5" step="0.5" style="width:80px;" placeholder="/5" />
+                                <span style="color:#888; margin-left:4px;">/ 5</span>
+                                <button class="list-btn" style="margin-left:8px;" @click="saveEditMyStar">OK</button>
+                                <button class="list-btn" style="margin-left:4px; background:#eee; color:#222;" @click="cancelEditMyStar">Annuler</button>
+                            </span>
+                        </div>
                         <div style="margin-bottom:8px; font-size:1.1rem;">
                             Progression :
                             <span v-if="!editProgressMode">
