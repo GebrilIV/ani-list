@@ -19,6 +19,9 @@ const app = new Vue({
         newListDescription: '', // Description de la nouvelle liste
         listSearch: '', // Recherche dans une liste
         listSort: 'lastview', // Tri des listes ('lastview', 'alpha')
+        // Recherche avancée (listDetail)
+        listAdvancedOpen: false, // Afficher/masquer filtres
+        listStatusFilters: [], // Filtre sur progress.status
         listDetailId: null, // ID de la liste en détail
         newAnimeName: '', // Nom du nouvel anime
         newAnimeSeason: '', // Saison du nouvel anime
@@ -89,6 +92,15 @@ const app = new Vue({
             let arr = this.currentListAnimes
                 .map(ref => this.getAnime(ref.id || ref))
                 .filter(a => a && a.id);
+
+            // Filtre statut (progress.status)
+            if (Array.isArray(this.listStatusFilters) && this.listStatusFilters.length > 0) {
+                arr = arr.filter(a => {
+                    const st = (a.progress && a.progress.status) ? a.progress.status : 'plan_to_watch';
+                    return this.listStatusFilters.includes(st);
+                });
+            }
+
             if (this.listSearch) {
                 const search = this.listSearch.toLowerCase();
                 arr = arr.filter(a => {
@@ -271,7 +283,22 @@ const app = new Vue({
             this.listDetailId = id;
             this.listSearch = '';
             this.listSort = 'lastview';
+            this.listAdvancedOpen = false;
+            this.listStatusFilters = [];
             this.setView('listDetail');
+        },
+        toggleListAdvanced() { // Toggle recherche avancée
+            this.listAdvancedOpen = !this.listAdvancedOpen;
+        },
+        toggleListStatusFilter(status) { // Toggle filtre statut
+            const s = (status || '').toString();
+            const idx = this.listStatusFilters.indexOf(s);
+            if (idx === -1) this.listStatusFilters.push(s);
+            else this.listStatusFilters.splice(idx, 1);
+        },
+        clearListFilters() { // Reset filtres recherche
+            this.listSearch = '';
+            this.listStatusFilters = [];
         },
         async fetchAnimeSuggestions() { // Suggestions d'animes
             const q = this.newAnimeName.trim();
@@ -627,6 +654,45 @@ const app = new Vue({
                     <option value="lastview">Dernier vu</option>
                     <option value="alpha">Ordre alphabétique</option>
                 </select>
+                <button class="list-btn" type="button" @click="toggleListAdvanced" :style="{ background: listAdvancedOpen ? '#4f8cff' : undefined }">
+                    Recherche avancée
+                </button>
+                <button v-if="listSearch || (listStatusFilters && listStatusFilters.length)" class="list-btn" type="button" @click="clearListFilters" style="background:#eee; color:#222;">
+                    Reset
+                </button>
+            </div>
+
+            <div v-if="listAdvancedOpen" :style="{
+                marginBottom: '16px',
+                padding: '12px',
+                borderRadius: '10px',
+                border: '1px solid ' + (isDarkTheme ? '#2f3438' : '#ddd'),
+                background: isDarkTheme ? '#23272a' : '#fafafa',
+                color: isDarkTheme ? '#f5f5f5' : '#23272a'
+            }">
+                <div style="font-weight:600; margin-bottom:8px;">Filtres</div>
+                <div style="font-size:0.95rem; color:#888; margin-bottom:10px;">
+                    Statut (progress)
+                </div>
+                <div style="display:flex; flex-wrap:wrap; gap:6px;">
+                    <button
+                        v-for="opt in progressStatusOptions"
+                        :key="'list-filter-' + opt.value"
+                        type="button"
+                        @click="toggleListStatusFilter(opt.value)"
+                        :style="{
+                            padding: '6px 10px',
+                            borderRadius: '999px',
+                            border: '1px solid ' + (listStatusFilters.includes(opt.value) ? '#4f8cff' : (isDarkTheme ? '#3a3f44' : '#ccc')),
+                            background: listStatusFilters.includes(opt.value) ? '#4f8cff' : (isDarkTheme ? '#1f2326' : '#fff'),
+                            color: listStatusFilters.includes(opt.value) ? '#fff' : (isDarkTheme ? '#f5f5f5' : '#23272a'),
+                            cursor: 'pointer',
+                            fontSize: '0.95rem'
+                        }"
+                    >
+                        {{ opt.label }}
+                    </button>
+                </div>
             </div>
             <div class="list-detail-animes">
                 <div v-if="filteredListAnimes.length === 0" style="color:#888;">Aucun anime dans cette liste.</div>
