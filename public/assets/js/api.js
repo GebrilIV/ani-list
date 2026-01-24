@@ -38,3 +38,14 @@ async function updateAnimeProgress(id, progress) {
     if (!res.ok) throw new Error('Erreur lors de la mise à jour de la progression');
     return res.json();
 }
+
+// Mettre à jour un anime (titre, description, progress, etc.)
+async function patchAnime(id, payload) {
+    const res = await fetch(`${API_BASE}/anime/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw new Error('Erreur lors de la mise à jour de l\'anime');
+    return res.json();
+}

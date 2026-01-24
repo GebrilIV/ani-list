@@ -118,6 +118,31 @@
             "star": "4.0",
             "last_view": 1768581380,
             "other1": "111"
+        },
+        {
+            "id": 6,
+            "id_anilist": 120700,
+            "title": "Re:Zero kara Hajimeru Kyuukei Jikan (Break Time) 2nd Season",
+            "title_romaji": "Re:Zero kara Hajimeru Kyuukei Jikan (Break Time) 2nd Season",
+            "episodes": 13,
+            "progress": {
+                "episode": 0,
+                "minute": 0,
+                "status": "rewatch_dropped",
+                "other1": ""
+            },
+            "status": "FINISHED",
+            "season": 1,
+            "tags": [
+                "Adventure",
+                "Comedy",
+                "Fantasy"
+            ],
+            "description": "The second season of Re:Zero kara Hajimeru Kyuukei Jikan (Break Time).",
+            "pics": "https:\/\/s4.anilist.co\/file\/anilistcdn\/media\/anime\/cover\/medium\/b120700-buuy9COgsBTa.jpg",
+            "star": "3.4",
+            "last_view": 1769291202,
+            "other1": ""
         }
     ],
     "lists": [
@@ -137,6 +162,19 @@
                 },
                 {
                     "id": 5
+                }
+            ]
+        },
+        {
+            "id": 2,
+            "order": 2,
+            "code1": 0,
+            "name": "tette",
+            "color": "#4f8cff",
+            "description": "123",
+            "animes": [
+                {
+                    "id": 6
                 }
             ]
         }
