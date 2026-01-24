@@ -127,7 +127,7 @@
             "title_romaji": "Re:Zero kara Hajimeru Kyuukei Jikan (Break Time) 2nd Season",
             "episodes": 13,
             "progress": {
-                "episode": 0,
+                "episode": 7,
                 "minute": 0,
                 "status": "rewatch_dropped",
                 "other1": ""
@@ -142,7 +142,31 @@
             "description": "The second season of Re:Zero kara Hajimeru Kyuukei Jikan (Break Time).",
             "pics": "https:\/\/s4.anilist.co\/file\/anilistcdn\/media\/anime\/cover\/medium\/b120700-buuy9COgsBTa.jpg",
             "star": "3.4",
-            "last_view": 1769291202,
+            "last_view": 1769296279,
+            "other1": "",
+            "my_star": 5
+        },
+        {
+            "id": 7,
+            "id_anilist": 140111,
+            "title": "Kizuna - In eternal remembrance of March 11, 2011",
+            "title_romaji": "Kizuna - In eternal remembrance of March 11, 2011",
+            "episodes": 1,
+            "progress": {
+                "episode": 0,
+                "minute": 0,
+                "status": "rewatch_planned"
+            },
+            "status": "FINISHED",
+            "season": 1,
+            "tags": [
+                "Drama"
+            ],
+            "description": "A story passed on is a living memorial.\nIn eternal remembrance of March 11, 2011.\n\n(Source: Official Website)",
+            "pics": "https:\/\/s4.anilist.co\/file\/anilistcdn\/media\/anime\/cover\/medium\/b140111-FTdUW2VyLwW4.png",
+            "star": "2.7",
+            "my_star": null,
+            "last_view": 1769296222,
             "other1": ""
         }
     ],
@@ -176,6 +200,9 @@
             "animes": [
                 {
                     "id": 6
+                },
+                {
+                    "id": 7
                 }
             ]
         }

@@ -67,6 +67,9 @@ const app = new Vue({
         editProgressStatus: 'watching', // Statut en édition
         editTitle: '', // Titre en édition
         editDescription: '', // Synopsis en édition
+        // Note perso
+        editMyStarMode: false, // Mode édition note perso
+        editMyStarValue: null, // Valeur note perso
         editOther1: '', // Édition champ libre
     },
     computed: {
@@ -144,6 +147,12 @@ const app = new Vue({
             const v = (value || '').toString();
             const opt = this.progressStatusOptions.find(o => o.value === v);
             return opt ? opt.label : (v || '—');
+        },
+        formatMyStar(value) { // Format note perso
+            if (value === null || typeof value === 'undefined' || value === '') return '—';
+            const n = Number(value);
+            if (Number.isNaN(n)) return '—';
+            return n.toFixed(1);
         },
         async fetchAnimes() { // Charger les animes
             try {
@@ -396,11 +405,41 @@ const app = new Vue({
             this.editProgressStatus = (anime.progress && anime.progress.status) ? anime.progress.status : 'watching';
             this.editTitle = anime.title || '';
             this.editDescription = anime.description || '';
+            // reset note perso (évite confusion)
+            this.editMyStarMode = false;
             // Cherche other1 dans progress, puis à la racine
             this.editOther1 = (anime.progress && typeof anime.progress.other1 !== 'undefined')
                 ? anime.progress.other1
                 : (anime.other1 || '');
             this.editProgressMode = true;
+        },
+        startEditMyStar() { // Edit note perso
+            const anime = this.getAnime(this.selectedAnimeId);
+            const v = (anime && typeof anime.my_star !== 'undefined') ? anime.my_star : null;
+            this.editMyStarValue = (v === null || typeof v === 'undefined' || v === '') ? null : Number(v);
+            this.editMyStarMode = true;
+        },
+        cancelEditMyStar() { // Cancel note perso
+            this.editMyStarMode = false;
+        },
+        async saveEditMyStar() { // Save note perso
+            const idx = this.animes.findIndex(a => a.id === this.selectedAnimeId);
+            if (idx === -1) return;
+            const val = (this.editMyStarValue === null || this.editMyStarValue === '' || typeof this.editMyStarValue === 'undefined')
+                ? null
+                : Number(this.editMyStarValue);
+
+            // UI update optimiste
+            this.animes[idx].my_star = (val === null || Number.isNaN(val)) ? null : val;
+
+            try {
+                await patchAnime(this.selectedAnimeId, { my_star: this.animes[idx].my_star });
+                await this.fetchAnimes();
+            } catch (e) {
+                this.error = 'Erreur lors de la sauvegarde de la note perso';
+            } finally {
+                this.editMyStarMode = false;
+            }
         },
         cancelEditProgress() { // Annuler l'édition de la progression
             this.editProgressMode = false;
@@ -774,7 +813,20 @@ const app = new Vue({
                         <div style="margin-bottom:8px;">
                             <span v-for="tag in getAnime(selectedAnimeId).tags" :key="tag" style="display:inline-block; background:#e0e7ff; color:#2d3a5a; border-radius:6px; padding:2px 10px; margin-right:6px; font-size:0.95rem;">{{ tag }}</span>
                         </div>
-                        <div style="margin-bottom:8px; font-size:1.1rem;">⭐ {{ getAnime(selectedAnimeId).star }} / 5</div>
+                        <div style="margin-bottom:8px; font-size:1.1rem;">⭐ Internet : {{ getAnime(selectedAnimeId).star }} / 5</div>
+                        <div style="margin-bottom:10px; font-size:1.05rem;">
+                            <span style="font-weight:600; color:#888;">Ma note :</span>
+                            <span v-if="!editMyStarMode" style="margin-left:6px;">
+                                {{ formatMyStar(getAnime(selectedAnimeId).my_star) }} / 5
+                                <span @click="startEditMyStar" style="color:#4f8cff; cursor:pointer; margin-left:10px; font-size:0.98rem;">noter</span>
+                            </span>
+                            <span v-else style="margin-left:6px;">
+                                <input type="number" v-model.number="editMyStarValue" min="0" max="5" step="0.5" style="width:80px;" placeholder="/5" />
+                                <span style="color:#888; margin-left:4px;">/ 5</span>
+                                <button class="list-btn" style="margin-left:8px;" @click="saveEditMyStar">OK</button>
+                                <button class="list-btn" style="margin-left:4px; background:#eee; color:#222;" @click="cancelEditMyStar">Annuler</button>
+                            </span>
+                        </div>
                         <div style="margin-bottom:8px; font-size:1.1rem;">
                             Progression :
                             <span v-if="!editProgressMode">
