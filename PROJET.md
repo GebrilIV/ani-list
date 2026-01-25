@@ -79,7 +79,11 @@ issues
 petite modif PROJET.md
 branch develop
 debut commenter code correctement
-statut anime
+issues #8 - (special progress tags, recherche via tags, rate)
+
+# D9 - 25.01.26:
+system recherche ameliorer (#13)
+
 
 
 

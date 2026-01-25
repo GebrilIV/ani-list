@@ -18,7 +18,7 @@ const app = new Vue({
         newListColor: '#4f8cff', // Couleur de la nouvelle liste
         newListDescription: '', // Description de la nouvelle liste
         listSearch: '', // Recherche dans une liste
-        listSort: 'lastview', // Tri des listes ('lastview', 'alpha')
+        listSort: 'lastview', // Tri des animes dans la liste ('lastview', 'oldview', 'alpha', ...)
         // Recherche avancée (listDetail)
         listAdvancedOpen: false, // Afficher/masquer filtres
         listStatusFilters: [], // Filtre sur progress.status
@@ -116,8 +116,81 @@ const app = new Vue({
             }
             if (this.listSort === 'alpha') {
                 arr = arr.slice().sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+            } else if (this.listSort === 'alpha_desc') {
+                arr = arr.slice().sort((a, b) => (b.title || '').localeCompare(a.title || ''));
             } else if (this.listSort === 'lastview') {
                 arr = arr.slice().sort((a, b) => (b.last_view || 0) - (a.last_view || 0));
+            } else if (this.listSort === 'oldview') {
+                arr = arr.slice().sort((a, b) => (a.last_view || 0) - (b.last_view || 0));
+            } else if (this.listSort === 'rated_overall_high') {
+                const overall = (anime) => {
+                    const v = parseFloat(anime.star);
+                    return Number.isFinite(v) ? v : null;
+                };
+                arr = arr.slice().sort((a, b) => {
+                    const ra = overall(a);
+                    const rb = overall(b);
+                    if (ra === null && rb === null) return 0;
+                    if (ra === null) return 1;
+                    if (rb === null) return -1;
+                    return rb - ra;
+                });
+            } else if (this.listSort === 'rated_overall_low') {
+                const overall = (anime) => {
+                    const v = parseFloat(anime.star);
+                    return Number.isFinite(v) ? v : null;
+                };
+                arr = arr.slice().sort((a, b) => {
+                    const ra = overall(a);
+                    const rb = overall(b);
+                    if (ra === null && rb === null) return 0;
+                    if (ra === null) return 1;
+                    if (rb === null) return -1;
+                    return ra - rb;
+                });
+            } else if (this.listSort === 'rated_personal_high') {
+                const personal = (anime) => {
+                    const v = parseFloat(anime.my_star);
+                    return Number.isFinite(v) ? v : null;
+                };
+                arr = arr.slice().sort((a, b) => {
+                    const ra = personal(a);
+                    const rb = personal(b);
+                    if (ra === null && rb === null) return 0;
+                    if (ra === null) return 1;
+                    if (rb === null) return -1;
+                    return rb - ra;
+                });
+            } else if (this.listSort === 'rated_personal_low') {
+                const personal = (anime) => {
+                    const v = parseFloat(anime.my_star);
+                    return Number.isFinite(v) ? v : null;
+                };
+                arr = arr.slice().sort((a, b) => {
+                    const ra = personal(a);
+                    const rb = personal(b);
+                    if (ra === null && rb === null) return 0;
+                    if (ra === null) return 1;
+                    if (rb === null) return -1;
+                    return ra - rb;
+                });
+            } else if (this.listSort === 'episodes_most') {
+                arr = arr.slice().sort((a, b) => (Number(b.episodes) || 0) - (Number(a.episodes) || 0));
+            } else if (this.listSort === 'near_completion') {
+                // Plus proche de la fin (reste d'épisodes le plus petit)
+                const remaining = (anime) => {
+                    const total = Number(anime.episodes) || 0;
+                    const watched = Number(anime.progress && anime.progress.episode) || 0;
+                    if (total <= 0) return Number.POSITIVE_INFINITY; // inconnu => tout à la fin
+                    return Math.max(0, total - watched);
+                };
+                arr = arr.slice().sort((a, b) => {
+                    const ra = remaining(a);
+                    const rb = remaining(b);
+                    if (ra !== rb) return ra - rb;
+                    // tie-breaker: plus vu récemment
+                    return (b.last_view || 0) - (a.last_view || 0);
+                });
             }
             return arr;
         },
@@ -690,8 +763,16 @@ const app = new Vue({
             <div class="list-detail-searchbar" style="margin-bottom:16px; display:flex; gap:12px; align-items:center;">
                 <input type="text" v-model="listSearch" placeholder="Rechercher un anime..." style="width:220px; padding:6px 10px; border-radius:6px; border:1px solid #ccc; font-size:1rem;" />
                 <select v-model="listSort" style="padding:6px 10px; border-radius:6px; border:1px solid #ccc; font-size:1rem;">
-                    <option value="lastview">Dernier vu</option>
-                    <option value="alpha">Ordre alphabétique</option>
+                    <option value="lastview">Vu récemment</option>
+                    <option value="oldview">Vu il y a longtemps</option>
+                    <option value="alpha">Ordre alphabétique (A→Z)</option>
+                    <option value="alpha_desc">Ordre alphabétique (Z→A)</option>
+                    <option value="rated_overall_high">Note internet (↓)</option>
+                    <option value="rated_overall_low">Note internet (↑)</option>
+                    <option value="rated_personal_high">Ma note (↓)</option>
+                    <option value="rated_personal_low">Ma note (↑)</option>
+                    <option value="episodes_most">Plus d’épisodes</option>
+                    <option value="near_completion">Proche de la fin</option>
                 </select>
                 <button class="list-btn" type="button" @click="toggleListAdvanced" :style="{ background: listAdvancedOpen ? '#4f8cff' : undefined }">
                     Recherche avancée
