@@ -482,6 +482,60 @@ body {
   padding: 32px 28px 24px 28px;
   border: 1.5px solid var(--color-accent);
 }
+
+/* Add Anime: grand aperçu image (desktop) */
+.modal-create-list.add-anime-modal {
+  max-width: 920px;
+}
+
+.add-anime-layout {
+  display: flex;
+  gap: 22px;
+  align-items: flex-start;
+}
+
+.add-anime-form {
+  flex: 1;
+  min-width: 320px;
+}
+
+.add-anime-preview {
+  width: 300px;
+  display: flex;
+  justify-content: center;
+}
+
+.add-anime-cover {
+  width: 100%;
+  max-width: 300px;
+  height: auto;
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
+  border-radius: 14px;
+  box-shadow: 0 6px 22px rgba(0,0,0,0.16);
+  border: 1px solid rgba(0,0,0,0.08);
+}
+
+[data-theme="dark"] .add-anime-cover {
+  border-color: rgba(255,255,255,0.10);
+  box-shadow: 0 6px 22px rgba(0,0,0,0.35);
+}
+
+@media (max-width: 820px) {
+  .modal-create-list.add-anime-modal {
+    max-width: 96%;
+  }
+  .add-anime-layout {
+    flex-direction: column;
+  }
+  .add-anime-preview {
+    width: 100%;
+    margin-bottom: 8px;
+  }
+  .add-anime-cover {
+    max-width: 220px;
+  }
+}
 .create-list-section {
   margin-bottom: 18px;
 }

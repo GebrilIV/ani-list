@@ -991,109 +991,124 @@ const app = new Vue({
             </div>
         </div>
         <div v-else-if="currentView === 'addAnime'">
-            <div class="modal-create-list">
+            <div class="modal-create-list add-anime-modal">
                 <button class="list-btn" style="float:right;" @click="setView('list')">Annuler</button>
                 <h2>Ajouter un anime</h2>
-                <div class="create-list-section">
-                    <label>Nom de l'anime :</label>
-                    <div style="display:flex; gap:8px; align-items:center; position:relative;">
-                        <input type="text" v-model="newAnimeName" placeholder="Nom de l'anime..." style="margin-bottom:12px; flex:1;" autocomplete="off" @focus="animeSuggestionDropdown = animeSuggestions.length > 0" @blur="handleAnimeInputBlur" />
-                        <button class="list-btn" style="padding:6px 12px;" @click.prevent="fetchAnimeInfo">🔍</button>
-                        <div v-if="animeSuggestionDropdown" class="suggestion-dropdown"
-                            :style="{
-                                position: 'absolute',
-                                left: 0,
-                                right: 0,
-                                top: '38px',
-                                zIndex: 20,
-                                background: isDarkTheme ? '#23272a' : '#fff',
-                                color: isDarkTheme ? '#f5f5f5' : '#23272a',
-                                border: '1px solid #ccc',
-                                borderRadius: '6px',
-                                boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
-                            }">
-                            <div v-if="animeSuggestionLoading" :style="{padding:'8px', color:'#888'}">Chargement...</div>
-                            <div v-else-if="animeSuggestions.length === 0" :style="{padding:'8px', color:'#888'}">Aucun résultat</div>
-                            <div v-else>
-                                <div v-for="s in animeSuggestions" :key="s.id" @mousedown.prevent="selectAnimeSuggestion(s)"
+                <div class="add-anime-layout">
+                    <div class="add-anime-form">
+                        <div class="create-list-section">
+                            <label>Nom de l'anime :</label>
+                            <div style="display:flex; gap:8px; align-items:center; position:relative;">
+                                <input type="text" v-model="newAnimeName" placeholder="Nom de l'anime..." style="margin-bottom:12px; flex:1;" autocomplete="off" @focus="animeSuggestionDropdown = animeSuggestions.length > 0" @blur="handleAnimeInputBlur" />
+                                <button class="list-btn" style="padding:6px 12px;" @click.prevent="fetchAnimeInfo">🔍</button>
+                                <div v-if="animeSuggestionDropdown" class="suggestion-dropdown"
                                     :style="{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '8px',
-                                        padding: '8px',
-                                        cursor: 'pointer',
-                                        borderBottom: '1px solid #eee',
+                                        position: 'absolute',
+                                        left: 0,
+                                        right: 0,
+                                        top: '38px',
+                                        zIndex: 20,
+                                        background: isDarkTheme ? '#23272a' : '#fff',
                                         color: isDarkTheme ? '#f5f5f5' : '#23272a',
-                                        background: 'transparent'
+                                        border: '1px solid #ccc',
+                                        borderRadius: '6px',
+                                        boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
                                     }">
-                                    <img :src="s.coverImage.medium" alt="cover" style="width:36px; height:36px; object-fit:cover; border-radius:4px;" />
-                                    <span>{{ s.title.romaji }}</span>
+                                    <div v-if="animeSuggestionLoading" :style="{padding:'8px', color:'#888'}">Chargement...</div>
+                                    <div v-else-if="animeSuggestions.length === 0" :style="{padding:'8px', color:'#888'}">Aucun résultat</div>
+                                    <div v-else>
+                                        <div v-for="s in animeSuggestions" :key="s.id" @mousedown.prevent="selectAnimeSuggestion(s)"
+                                            :style="{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '8px',
+                                                padding: '8px',
+                                                cursor: 'pointer',
+                                                borderBottom: '1px solid #eee',
+                                                color: isDarkTheme ? '#f5f5f5' : '#23272a',
+                                                background: 'transparent'
+                                            }">
+                                            <img :src="s.coverImage.medium" alt="cover" style="width:36px; height:36px; object-fit:cover; border-radius:4px;" />
+                                            <span>{{ s.title.romaji }}</span>
+                                        </div>
+                                    </div>
                                 </div>
+                                <img v-if="animeSuggestionSelected && animeSuggestionSelected.image" :src="animeSuggestionSelected.image" alt="cover" style="width:48px; height:48px; object-fit:cover; border-radius:6px; margin-left:12px;" />
+                            </div>
+                            <div v-if="doublonCount > 0" style="color:#d9534f; font-size:0.95em; margin-top:2px;">{{ doublonCount }} doublon{{ doublonCount > 1 ? 's' : '' }} trouvé{{ doublonCount > 1 ? 's' : '' }}</div>
+                        </div>
+                        <div class="create-list-section">
+                            <label>Liste :</label>
+                            <select v-model="newAnimeListId" style="margin-bottom:12px; width:100%; padding:8px; border-radius:6px; border:1px solid #ccc;">
+                                <option v-for="list in lists" :key="list.id" :value="list.id">{{ list.name }}</option>
+                            </select>
+                        </div>
+                        <div class="create-list-section">
+                            <label>Progression (facultatif) :</label>
+                            <div style="display:flex; gap:8px; align-items:center;">
+                                <input type="number" v-model="newAnimeSeason" min="1" placeholder="Saison" style="width:70px;" />
+                                <input type="number" v-model="newAnimeEpisode" min="1" placeholder="Épisode" style="width:90px;" />
+                                <input type="number" v-model="newAnimeMinute" min="0" placeholder="Minute" style="width:90px;" />
                             </div>
                         </div>
-                        <img v-if="animeSuggestionSelected && animeSuggestionSelected.image" :src="animeSuggestionSelected.image" alt="cover" style="width:48px; height:48px; object-fit:cover; border-radius:6px; margin-left:12px;" />
+                        <div class="create-list-section">
+                            <label>Statut (visionnage) :</label>
+                            <div style="display:flex; flex-wrap:wrap; gap:6px;">
+                                <button
+                                    v-for="opt in progressStatusOptions"
+                                    :key="opt.value"
+                                    type="button"
+                                    @click="newAnimeProgressStatus = opt.value"
+                                    :style="{
+                                        padding: '6px 10px',
+                                        borderRadius: '999px',
+                                        border: '1px solid ' + (newAnimeProgressStatus === opt.value ? '#4f8cff' : '#ccc'),
+                                        background: newAnimeProgressStatus === opt.value ? '#4f8cff' : (isDarkTheme ? '#23272a' : '#fff'),
+                                        color: newAnimeProgressStatus === opt.value ? '#fff' : (isDarkTheme ? '#f5f5f5' : '#23272a'),
+                                        cursor: 'pointer',
+                                        fontSize: '0.95rem'
+                                    }"
+                                >
+                                    {{ opt.label }}
+                                </button>
+                            </div>
+                        </div>
+                        <!-- Bloc info sur l'anime -->
+                        <div :style="{
+                            margin: '24px 0 0 0',
+                            padding: '16px',
+                            background: isDarkTheme ? '#23272a' : '#f7f7f7',
+                            borderRadius: '8px',
+                            border: '1px solid #eee',
+                            color: isDarkTheme ? '#f5f5f5' : '#23272a'
+                        }">
+                            <h3 style="margin-top:0; margin-bottom:12px; font-size:1.15rem; font-weight:600;">info sur l'anime</h3>
+                            <div>id_anilist: <input type="text" v-model="animeFields.id_anilist" style="width:90%;" /></div>
+                            <div>title: <input type="text" v-model="animeFields.title" style="width:90%;" /></div>
+                            <div>title_romaji: <input type="text" v-model="animeFields.title_romaji" style="width:90%;" /></div>
+                            <div>episodes: <input type="text" v-model="animeFields.episodes" style="width:90%;" /></div>
+                            <div>status: <input type="text" v-model="animeFields.status" style="width:90%;" /></div>
+                            <div>star: <input type="text" v-model="animeFields.star" style="width:90%;" /></div>
+                            <div>tags: <input type="text" v-model="animeFields.tags" style="width:90%;" /></div>
+                            <div>pics: <input type="text" v-model="animeFields.pics" style="width:90%;" /></div>
+                            <div>description: <input type="text" v-model="animeFields.description" style="width:90%;" /></div>
+                            <div>autres : <input type="text" v-model="animeFields.other1" style="width:90%;" placeholder="Notes, liens, etc..." /></div>
+                        </div>
+                        <div style="margin-top:32px; text-align:center;">
+                            <button class="list-btn" style="width:180px;" @click="handleAddAnime">Valider</button>
+                        </div>
                     </div>
-                    <div v-if="doublonCount > 0" style="color:#d9534f; font-size:0.95em; margin-top:2px;">{{ doublonCount }} doublon{{ doublonCount > 1 ? 's' : '' }} trouvé{{ doublonCount > 1 ? 's' : '' }}</div>
-                </div>
-                <div class="create-list-section">
-                    <label>Liste :</label>
-                    <select v-model="newAnimeListId" style="margin-bottom:12px; width:100%; padding:8px; border-radius:6px; border:1px solid #ccc;">
-                        <option v-for="list in lists" :key="list.id" :value="list.id">{{ list.name }}</option>
-                    </select>
-                </div>
-                <div class="create-list-section">
-                    <label>Progression (facultatif) :</label>
-                    <div style="display:flex; gap:8px; align-items:center;">
-                        <input type="number" v-model="newAnimeSeason" min="1" placeholder="Saison" style="width:70px;" />
-                        <input type="number" v-model="newAnimeEpisode" min="1" placeholder="Épisode" style="width:90px;" />
-                        <input type="number" v-model="newAnimeMinute" min="0" placeholder="Minute" style="width:90px;" />
+                    <div
+                        v-if="(animeFields && animeFields.pics) || (animeSuggestionSelected && animeSuggestionSelected.image)"
+                        class="add-anime-preview"
+                        aria-label="Aperçu de l'anime"
+                    >
+                        <img
+                            class="add-anime-cover"
+                            :src="(animeFields && animeFields.pics) ? animeFields.pics : animeSuggestionSelected.image"
+                            :alt="(animeFields && animeFields.title) ? animeFields.title : (animeSuggestionSelected ? animeSuggestionSelected.title : 'cover')"
+                        />
                     </div>
-                </div>
-                <div class="create-list-section">
-                    <label>Statut (visionnage) :</label>
-                    <div style="display:flex; flex-wrap:wrap; gap:6px;">
-                        <button
-                            v-for="opt in progressStatusOptions"
-                            :key="opt.value"
-                            type="button"
-                            @click="newAnimeProgressStatus = opt.value"
-                            :style="{
-                                padding: '6px 10px',
-                                borderRadius: '999px',
-                                border: '1px solid ' + (newAnimeProgressStatus === opt.value ? '#4f8cff' : '#ccc'),
-                                background: newAnimeProgressStatus === opt.value ? '#4f8cff' : (isDarkTheme ? '#23272a' : '#fff'),
-                                color: newAnimeProgressStatus === opt.value ? '#fff' : (isDarkTheme ? '#f5f5f5' : '#23272a'),
-                                cursor: 'pointer',
-                                fontSize: '0.95rem'
-                            }"
-                        >
-                            {{ opt.label }}
-                        </button>
-                    </div>
-                </div>
-                <!-- Bloc info sur l'anime -->
-                <div :style="{
-                    margin: '24px 0 0 0',
-                    padding: '16px',
-                    background: isDarkTheme ? '#23272a' : '#f7f7f7',
-                    borderRadius: '8px',
-                    border: '1px solid #eee',
-                    color: isDarkTheme ? '#f5f5f5' : '#23272a'
-                }">
-                    <h3 style="margin-top:0; margin-bottom:12px; font-size:1.15rem; font-weight:600;">info sur l'anime</h3>
-                    <div>id_anilist: <input type="text" v-model="animeFields.id_anilist" style="width:90%;" /></div>
-                    <div>title: <input type="text" v-model="animeFields.title" style="width:90%;" /></div>
-                    <div>title_romaji: <input type="text" v-model="animeFields.title_romaji" style="width:90%;" /></div>
-                    <div>episodes: <input type="text" v-model="animeFields.episodes" style="width:90%;" /></div>
-                    <div>status: <input type="text" v-model="animeFields.status" style="width:90%;" /></div>
-                    <div>star: <input type="text" v-model="animeFields.star" style="width:90%;" /></div>
-                    <div>tags: <input type="text" v-model="animeFields.tags" style="width:90%;" /></div>
-                    <div>pics: <input type="text" v-model="animeFields.pics" style="width:90%;" /></div>
-                    <div>description: <input type="text" v-model="animeFields.description" style="width:90%;" /></div>
-                    <div>autres : <input type="text" v-model="animeFields.other1" style="width:90%;" placeholder="Notes, liens, etc..." /></div>
-                </div>
-                <div style="margin-top:32px; text-align:center;">
-                    <button class="list-btn" style="width:180px;" @click="handleAddAnime">Valider</button>
                 </div>
             </div>
         </div>
