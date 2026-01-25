@@ -49,3 +49,22 @@ async function patchAnime(id, payload) {
     if (!res.ok) throw new Error('Erreur lors de la mise à jour de l\'anime');
     return res.json();
 }
+
+// Supprimer un anime
+async function deleteAnime(id) {
+    const res = await fetch(`${API_BASE}/anime/${id}`, {
+        method: 'DELETE'
+    });
+    if (!res.ok) throw new Error('Erreur lors de la suppression de l\'anime');
+    return res.json();
+}
+
+// Supprimer une liste
+async function deleteList(id, options = {}) {
+    const qs = options && options.deleteAnimes ? '?deleteAnimes=1' : '';
+    const res = await fetch(`${API_BASE}/lists/${id}${qs}`, {
+        method: 'DELETE'
+    });
+    if (!res.ok) throw new Error('Erreur lors de la suppression de la liste');
+    return res.json();
+}

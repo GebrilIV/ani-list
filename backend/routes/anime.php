@@ -4,6 +4,12 @@ use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 
 return function ($app) {
+    $saveJsonFile = function (string $file, array $data): void {
+        $tmp = $file . '.tmp';
+        file_put_contents($tmp, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX);
+        rename($tmp, $file);
+    };
+
     $allowedProgressStatus = [
         'watching',
         'completed',
@@ -191,6 +197,49 @@ return function ($app) {
             $response = $response->withStatus(404);
             $response->getBody()->write(json_encode(['error'=>'Anime not found']));
         }
+        return $response->withHeader('Content-Type', 'application/json');
+    });
+
+    // DELETE /anime/{id} : supprime un anime + retire sa référence des listes
+    $app->delete('/anime/{id}', function (Request $request, Response $response, $args) use ($saveJsonFile) {
+        $id = (int)$args['id'];
+        $file = __DIR__ . '/../storage/data.json';
+        $data = json_decode(file_get_contents($file), true);
+
+        if (!is_array($data)) $data = [];
+        if (!isset($data['anime']) || !is_array($data['anime'])) $data['anime'] = [];
+        if (!isset($data['lists']) || !is_array($data['lists'])) $data['lists'] = [];
+
+        $beforeAnimeCount = count($data['anime']);
+        $data['anime'] = array_values(array_filter($data['anime'], function ($a) use ($id) {
+            return (int)($a['id'] ?? 0) !== $id;
+        }));
+
+        $deleted = count($data['anime']) !== $beforeAnimeCount;
+        if (!$deleted) {
+            $response = $response->withStatus(404);
+            $response->getBody()->write(json_encode(['error' => 'Anime not found']));
+            return $response->withHeader('Content-Type', 'application/json');
+        }
+
+        // Retire l'id de toutes les listes (format actuel: animes=[{id}], ancien: animeIds=[id])
+        foreach ($data['lists'] as &$list) {
+            if (isset($list['animes']) && is_array($list['animes'])) {
+                $list['animes'] = array_values(array_filter($list['animes'], function ($ref) use ($id) {
+                    if (is_array($ref)) return (int)($ref['id'] ?? 0) !== $id;
+                    return (int)$ref !== $id;
+                }));
+            }
+            if (isset($list['animeIds']) && is_array($list['animeIds'])) {
+                $list['animeIds'] = array_values(array_filter($list['animeIds'], function ($refId) use ($id) {
+                    return (int)$refId !== $id;
+                }));
+            }
+        }
+        unset($list);
+
+        $saveJsonFile($file, $data);
+        $response->getBody()->write(json_encode(['success' => true]));
         return $response->withHeader('Content-Type', 'application/json');
     });
 };
