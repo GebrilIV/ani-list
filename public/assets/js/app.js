@@ -962,11 +962,11 @@ const app = new Vue({
                 </div>
             </div>
         </div>
-        <div v-else-if="currentView === 'animeDetail' && selectedAnimeId">
+        <div v-else-if="currentView === 'animeDetail' && selectedAnimeId" class="anime-detail-view">
             <div v-if="getAnime(selectedAnimeId).id">
-                <div style="display:flex; align-items:flex-start; gap:24px; margin-bottom:24px;">
-                    <img :src="getAnime(selectedAnimeId).pics" alt="cover" style="width:180px; height:260px; object-fit:cover; border-radius:12px; box-shadow:0 2px 12px rgba(0,0,0,0.10);" />
-                    <div>
+                <div class="anime-detail-header" style="display:flex; align-items:flex-start; gap:24px; margin-bottom:24px;">
+                    <img class="anime-detail-cover" :src="getAnime(selectedAnimeId).pics" alt="cover" style="width:180px; height:260px; object-fit:cover; border-radius:12px; box-shadow:0 2px 12px rgba(0,0,0,0.10);" />
+                    <div class="anime-detail-info">
                         <div style="font-size:2rem; font-weight:bold;">
                             <span v-if="!editProgressMode">{{ getAnime(selectedAnimeId).title }}</span>
                             <span v-else>
@@ -974,8 +974,8 @@ const app = new Vue({
                             </span>
                         </div>
                         <div style="font-size:1.2rem; color:#888; margin-bottom:12px;">{{ getAnime(selectedAnimeId).title_romaji }}</div>
-                        <div style="margin-bottom:12px; color:#555;">
-                            <span v-if="!editProgressMode">{{ getAnime(selectedAnimeId).description }}</span>
+                        <div class="anime-detail-description" style="margin-bottom:12px; color:#555;">
+                            <span v-if="!editProgressMode" class="anime-detail-description-text">{{ getAnime(selectedAnimeId).description }}</span>
                             <span v-else>
                                 <textarea v-model="editDescription" rows="5" style="width:92%; border-radius:8px; border:1px solid #ccc; padding:8px; font-size:1rem;"></textarea>
                             </span>

@@ -1,4 +1,44 @@
 {
-    "anime": [],
-    "lists": []
+    "anime": [
+        {
+            "id": 1,
+            "id_anilist": 21459,
+            "title": "My Hero Academia",
+            "title_romaji": "Boku no Hero Academia",
+            "episodes": 13,
+            "progress": {
+                "episode": 0,
+                "minute": 0,
+                "status": "completed"
+            },
+            "status": "FINISHED",
+            "season": 1,
+            "tags": [
+                "Action",
+                "Adventure",
+                "Comedy"
+            ],
+            "description": "What would the world be like if 80 percent of the population manifested extraordinary superpowers called “Quirks” at age four? Heroes and villains would be battling it out everywhere! Becoming a hero would mean learning to use your power, but where would you go to study? U.A. High's Hero Program of course! But what would you do if you were one of the 20 percent who were born Quirkless?\n\nMiddle school student Izuku Midoriya wants to be a hero more than anything, but he hasn't got an ounce of power in him. With no chance of ever getting into the prestigious U.A. High School for budding heroes, his life is looking more and more like a dead end. Then an encounter with All Might, the greatest hero of them all gives him a chance to change his destiny…\n\n(Source: Viz Media)",
+            "pics": "https:\/\/s4.anilist.co\/file\/anilistcdn\/media\/anime\/cover\/medium\/bx21459-nYh85uj2Fuwr.jpg",
+            "star": "3.8",
+            "my_star": null,
+            "last_view": 1769353197,
+            "other1": ""
+        }
+    ],
+    "lists": [
+        {
+            "id": 1,
+            "order": 1,
+            "code1": 0,
+            "name": "ttt",
+            "color": "#4f8cff",
+            "description": "",
+            "animes": [
+                {
+                    "id": 1
+                }
+            ]
+        }
+    ]
 }
