@@ -71,6 +71,18 @@ const app = new Vue({
         editMyStarMode: false, // Mode édition note perso
         editMyStarValue: null, // Valeur note perso
         editOther1: '', // Édition champ libre
+
+        // Confirmation sécurisée (suppression)
+        confirmOpen: false,
+        confirmKind: '', // 'anime' | 'list'
+        confirmId: null,
+        confirmName: '',
+        confirmExpected: '',
+        confirmInput: '',
+        confirmSure: false,
+        confirmAllowDeleteAnimes: false,
+        confirmDeleteAnimes: false,
+        confirmMessage: '',
     },
     computed: {
         filteredAnimes() { // Animes filtrés par recherche
@@ -216,6 +228,92 @@ const app = new Vue({
         },
     },
     methods: {
+        normalizeConfirmText(text) { // Normalise espaces + trim pour la comparaison
+            return (text || '').toString().trim().replace(/\s+/g, ' ');
+        },
+        openConfirmDelete(payload) { // Ouvre la modale de suppression sécurisée
+            const kind = payload && payload.kind ? payload.kind : '';
+            const id = payload && typeof payload.id !== 'undefined' ? payload.id : null;
+            const name = payload && payload.name ? payload.name : '';
+            const allowDeleteAnimes = !!(payload && payload.allowDeleteAnimes);
+            const message = payload && payload.message ? payload.message : '';
+
+            const safeName = this.normalizeConfirmText(name) || (kind === 'list' ? 'cette liste' : 'cet anime');
+            this.confirmOpen = true;
+            this.confirmKind = kind;
+            this.confirmId = id;
+            this.confirmName = safeName;
+            // Sécurité: inclure l'id dans la phrase à taper
+            this.confirmExpected = `SUPPRIMER ${safeName} ${id}`;
+            this.confirmInput = '';
+            this.confirmSure = false;
+            this.confirmAllowDeleteAnimes = allowDeleteAnimes;
+            this.confirmDeleteAnimes = false;
+            this.confirmMessage = message;
+        },
+        cancelConfirmDelete() { // Ferme la modale et reset l'état
+            this.confirmOpen = false;
+            this.confirmKind = '';
+            this.confirmId = null;
+            this.confirmName = '';
+            this.confirmExpected = '';
+            this.confirmInput = '';
+            this.confirmSure = false;
+            this.confirmAllowDeleteAnimes = false;
+            this.confirmDeleteAnimes = false;
+            this.confirmMessage = '';
+        },
+        isConfirmReady() { // Valide la saisie + checkbox
+            const typed = this.normalizeConfirmText(this.confirmInput);
+            const expected = this.normalizeConfirmText(this.confirmExpected);
+            return this.confirmSure && typed === expected;
+        },
+        async applyConfirmDelete() { // Exécute la suppression après validation
+            if (!this.isConfirmReady()) return;
+            const kind = this.confirmKind;
+            const id = this.confirmId;
+
+            // Ferme la modale rapidement (UX), mais garde loading pour bloquer les actions
+            this.confirmOpen = false;
+
+            if (!id || !kind) return;
+
+            try {
+                this.loading = true;
+
+                if (kind === 'anime') {
+                    await deleteAnime(id);
+                    await this.fetchAnimes();
+                    await this.fetchLists();
+
+                    // Retour à la liste si possible
+                    const backListId = this.previousListId;
+                    this.selectedAnimeId = null;
+                    this.editProgressMode = false;
+                    this.editMyStarMode = false;
+                    if (backListId) {
+                        this.openListDetail(backListId);
+                    } else {
+                        this.setView('list');
+                    }
+                } else if (kind === 'list') {
+                    await deleteList(id, { deleteAnimes: !!this.confirmDeleteAnimes });
+                    await this.fetchLists();
+                    // Si on a supprimé aussi des animes, on recharge aussi les animes
+                    await this.fetchAnimes();
+                    this.listDetailId = null;
+                    this.setView('list');
+                }
+            } catch (e) {
+                this.error = kind === 'list'
+                    ? 'Erreur lors de la suppression de la liste'
+                    : "Erreur lors de la suppression de l'anime";
+            } finally {
+                this.loading = false;
+                // Reset complet de l'état de confirmation
+                this.cancelConfirmDelete();
+            }
+        },
         progressStatusLabel(value) { // Label statut (perso)
             const v = (value || '').toString();
             const opt = this.progressStatusOptions.find(o => o.value === v);
@@ -551,6 +649,28 @@ const app = new Vue({
             }
             this.editProgressMode = false;
         },
+        async confirmDeleteAnime() { // Supprimer un anime (avec confirmation)
+            const anime = this.getAnime(this.selectedAnimeId);
+            const title = anime && anime.title ? anime.title : 'cet anime';
+            this.openConfirmDelete({
+                kind: 'anime',
+                id: this.selectedAnimeId,
+                name: title,
+                allowDeleteAnimes: false,
+                message: 'Cette action est irréversible.'
+            });
+        },
+        async confirmDeleteCurrentList() { // Supprimer une liste (avec confirmation)
+            if (!this.currentListDetail || !this.currentListDetail.id) return;
+            const name = this.currentListDetail.name || 'cette liste';
+            this.openConfirmDelete({
+                kind: 'list',
+                id: this.currentListDetail.id,
+                name,
+                allowDeleteAnimes: true,
+                message: 'Tu peux choisir de supprimer uniquement la liste, ou la liste + tous les animes qu\'elle contient.'
+            });
+        },
         showAnimeDetail(id) { // Afficher les détails d'un anime
             this.selectedAnimeId = id;
             this.currentView = 'animeDetail';
@@ -759,6 +879,7 @@ const app = new Vue({
                 <h2>{{ currentListDetail.name }}</h2>
                 <p>{{ currentListDetail.description }}</p>
                 <button class="list-btn" style="float:right;" @click="setView('list')">Retour</button>
+                <button class="list-btn" style="float:right; margin-right:10px; background:#e74c3c;" @click="confirmDeleteCurrentList">Supprimer</button>
             </div>
             <div class="list-detail-searchbar" style="margin-bottom:16px; display:flex; gap:12px; align-items:center;">
                 <input type="text" v-model="listSearch" placeholder="Rechercher un anime..." style="width:220px; padding:6px 10px; border-radius:6px; border:1px solid #ccc; font-size:1rem;" />
@@ -925,6 +1046,7 @@ const app = new Vue({
                             Dernière vue : <span style="font-weight:600; color:#222;">{{ formatLastView(getAnime(selectedAnimeId).last_view) }}</span>
                         </div>
                         <button class="list-btn" @click="setView('listDetail', null, previousListId)">Retour à la liste</button>
+                        <button class="list-btn" style="margin-left:10px; background:#e74c3c;" @click="confirmDeleteAnime">Supprimer</button>
                     </div>
                 </div>
             </div>
@@ -947,6 +1069,41 @@ const app = new Vue({
                 <p>Utilise la barre de recherche pour explorer AniList.</p>
             </div>
         </div>
+        <!-- Modale de confirmation (suppression sécurisée) -->
+        <div v-if="confirmOpen" class="confirm-overlay" @click.self="cancelConfirmDelete">
+            <div class="confirm-modal" role="dialog" aria-modal="true">
+                <div class="confirm-modal-header">
+                    <div class="confirm-modal-title">Suppression - confirmation requise</div>
+                    <button class="list-btn btn-ghost" type="button" @click="cancelConfirmDelete">X</button>
+                </div>
+                <div class="confirm-modal-body">
+                    <div style="margin-bottom:6px;">
+                        Tu es sur le point de supprimer : <strong>{{ confirmName }}</strong>
+                    </div>
+                    <div v-if="confirmMessage" class="confirm-danger-note">{{ confirmMessage }}</div>
+
+                    <div style="margin-top:10px; font-size:0.95rem; color:#888;">
+                        Tape exactement : <strong>{{ confirmExpected }}</strong>
+                    </div>
+                    <input class="confirm-input" type="text" v-model="confirmInput" :placeholder="confirmExpected" />
+
+                    <label class="confirm-check">
+                        <input type="checkbox" v-model="confirmSure" />
+                        <span>Je suis sûr de ce que je fais (action irréversible).</span>
+                    </label>
+
+                    <label v-if="confirmKind === 'list' && confirmAllowDeleteAnimes" class="confirm-check">
+                        <input type="checkbox" v-model="confirmDeleteAnimes" />
+                        <span>Supprimer aussi les animes de cette liste (ils seront retirés de toutes les listes).</span>
+                    </label>
+                </div>
+                <div class="confirm-modal-actions">
+                    <button class="list-btn btn-ghost" type="button" @click="cancelConfirmDelete">Annuler</button>
+                    <button class="list-btn btn-danger" type="button" :disabled="!isConfirmReady() || loading" @click="applyConfirmDelete">Supprimer</button>
+                </div>
+            </div>
+        </div>
+
         <div v-if="loading">Chargement...</div>
         <div v-if="error" style="color:red">{{ error }}</div>
     </div>
