@@ -511,6 +511,50 @@ body {
   border-color: rgba(255,255,255,0.10);
   box-shadow: 0 4px 14px rgba(0,0,0,0.35);
 }
+
+/* Add Anime: infos limite AniList */
+.anilist-rate-box {
+  margin: 6px 0 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(0,0,0,0.10);
+  background: rgba(79, 140, 255, 0.06);
+}
+
+[data-theme="dark"] .anilist-rate-box {
+  border-color: rgba(255,255,255,0.10);
+  background: rgba(79, 140, 255, 0.10);
+}
+
+.anilist-rate-box.is-warning {
+  border-color: rgba(217, 83, 79, 0.75);
+  background: rgba(217, 83, 79, 0.06);
+}
+
+.anilist-rate-title {
+  font-weight: 650;
+  margin-bottom: 6px;
+}
+
+.anilist-rate-line {
+  font-size: 0.95rem;
+}
+
+.anilist-rate-note {
+  margin-top: 6px;
+  font-size: 0.85rem;
+  color: #888;
+}
+
+[data-theme="dark"] .anilist-rate-note {
+  color: #9aa0a6;
+}
+
+.anilist-rate-error {
+  margin-top: 6px;
+  color: #d9534f;
+  font-weight: 600;
+}
 .create-list-section {
   margin-bottom: 18px;
 }

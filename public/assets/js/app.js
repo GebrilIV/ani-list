@@ -40,6 +40,17 @@ const app = new Vue({
         animeSuggestionSelected: null, // Suggestion sélectionnée
         animeSuggestionError: '', // Erreur dans les suggestions
         animeSuggestionDropdown: false, // Dropdown des suggestions
+        // AniList rate limit (estimation locale)
+        anilistRate: {
+            limit: 30, // README: 30 requêtes / minute
+            windowMs: 60_000,
+            calls: [], // timestamps (ms)
+            lastStatus: null,
+            lastError: '',
+            lastRequestAt: null,
+            lastResponseAt: null,
+        },
+        anilistRateTick: 0, // pour rafraîchir l'affichage (compte à rebours)
         newAnimeListId: null, // ID de la liste pour ajout
         animeInfo: null, // Infos détaillées d'un anime
         animeFields: { // Champs pour un nouvel anime
@@ -93,6 +104,35 @@ const app = new Vue({
         confirmMessage: '',
     },
     computed: {
+        anilistRateInfo() { // infos calculées (estimation locale)
+            // dépendance pour re-render (compte à rebours)
+            void this.anilistRateTick;
+
+            const now = Date.now();
+            const limit = (this.anilistRate && typeof this.anilistRate.limit === 'number') ? this.anilistRate.limit : 30;
+            const windowMs = (this.anilistRate && typeof this.anilistRate.windowMs === 'number') ? this.anilistRate.windowMs : 60000;
+            const calls = (this.anilistRate && Array.isArray(this.anilistRate.calls)) ? this.anilistRate.calls : [];
+
+            const pruned = calls.filter(ts => typeof ts === 'number' && (now - ts) < windowMs);
+            const used = pruned.length;
+            const remaining = Math.max(0, limit - used);
+
+            const oldest = pruned.length > 0 ? pruned[0] : null;
+            const resetInMs = oldest ? Math.max(0, windowMs - (now - oldest)) : 0;
+
+            const lastStatus = this.anilistRate ? this.anilistRate.lastStatus : null;
+            const lastError = this.anilistRate ? (this.anilistRate.lastError || '') : '';
+
+            return {
+                limit,
+                windowSec: Math.round(windowMs / 1000),
+                used,
+                remaining,
+                resetInSec: resetInMs ? Math.ceil(resetInMs / 1000) : 0,
+                lastStatus,
+                lastError,
+            };
+        },
         filteredAnimes() { // Animes filtrés par recherche
             if (!this.search) return this.animes;
             return this.animes.filter(a => a.title.toLowerCase().includes(this.search.toLowerCase()));
@@ -665,6 +705,32 @@ const app = new Vue({
             this.listSearch = '';
             this.listStatusFilters = [];
         },
+        pruneAniListCalls() {
+            const now = Date.now();
+            const windowMs = (this.anilistRate && typeof this.anilistRate.windowMs === 'number') ? this.anilistRate.windowMs : 60000;
+            const calls = (this.anilistRate && Array.isArray(this.anilistRate.calls)) ? this.anilistRate.calls : [];
+            const pruned = calls.filter(ts => typeof ts === 'number' && (now - ts) < windowMs);
+            if (this.anilistRate) this.anilistRate.calls = pruned;
+        },
+        trackAniListRequest() {
+            this.pruneAniListCalls();
+            if (!this.anilistRate) return;
+            const now = Date.now();
+            if (!Array.isArray(this.anilistRate.calls)) this.anilistRate.calls = [];
+            this.anilistRate.calls.push(now);
+            this.anilistRate.lastRequestAt = now;
+            this.anilistRate.lastError = '';
+            this.anilistRate.lastStatus = null;
+        },
+        trackAniListResponse(res) {
+            if (!this.anilistRate) return;
+            this.anilistRate.lastResponseAt = Date.now();
+            if (res && typeof res.status === 'number') this.anilistRate.lastStatus = res.status;
+            if (res && res.ok === false) {
+                if (res.status === 429) this.anilistRate.lastError = 'Limite atteinte (HTTP 429)';
+                else this.anilistRate.lastError = `Erreur AniList (HTTP ${res.status})`;
+            }
+        },
         async fetchAnimeSuggestions() { // Suggestions d'animes
             const q = this.newAnimeName.trim();
             if (q.length < 2) { this.animeSuggestions = []; this.animeSuggestionDropdown = false; return; }
@@ -673,16 +739,19 @@ const app = new Vue({
             try {
                 const query = `query ($search: String) { Page(perPage: 6) { media(search: $search, type: ANIME) { id title { romaji } coverImage { medium } } } }`;
                 const variables = { search: q };
+                this.trackAniListRequest();
                 const res = await fetch('https://graphql.anilist.co', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
                     body: JSON.stringify({ query, variables })
                 });
+                this.trackAniListResponse(res);
                 const json = await res.json();
                 this.animeSuggestions = (json.data && json.data.Page && json.data.Page.media) ? json.data.Page.media : [];
                 this.animeSuggestionDropdown = this.animeSuggestions.length > 0;
             } catch (e) {
                 this.animeSuggestionError = 'Erreur AniList';
+                if (this.anilistRate) this.anilistRate.lastError = 'Erreur réseau AniList';
                 this.animeSuggestions = [];
                 this.animeSuggestionDropdown = false;
             } finally {
@@ -696,11 +765,13 @@ const app = new Vue({
             try {
                 const query = `query ($search: String) { Media(search: $search, type: ANIME) { id idMal title { romaji english } description(asHtml: false) episodes status averageScore tags { name } coverImage { medium large } genres } }`;
                 const variables = { search: q };
+                this.trackAniListRequest();
                 const res = await fetch('https://graphql.anilist.co', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
                     body: JSON.stringify({ query, variables })
                 });
+                this.trackAniListResponse(res);
                 const json = await res.json();
                 if (json.data && json.data.Media) {
                     const m = json.data.Media;
@@ -717,6 +788,7 @@ const app = new Vue({
             } catch (e) {
                 // reset fields on error
                 Object.keys(this.animeFields).forEach(k => this.animeFields[k] = '');
+                if (this.anilistRate) this.anilistRate.lastError = 'Erreur réseau AniList';
             } finally {
                 this.animeSuggestionLoading = false;
             }
@@ -889,6 +961,11 @@ const app = new Vue({
         this.fetchLists();
         // Initialisation du thème au montage
         document.documentElement.setAttribute('data-theme', localStorage.getItem('theme') || 'light');
+
+        // Tick simple pour rafraîchir l'info de limite AniList (compte à rebours)
+        window.setInterval(() => {
+            this.anilistRateTick = (this.anilistRateTick + 1) % 1_000_000;
+        }, 1000);
     },
     template: `
     <div>
@@ -996,6 +1073,20 @@ const app = new Vue({
                 <h2>Ajouter un anime</h2>
                 <div class="add-anime-layout">
                     <div class="add-anime-form">
+                        <div
+                            class="anilist-rate-box"
+                            :class="{ 'is-warning': anilistRateInfo.lastStatus === 429 || anilistRateInfo.remaining === 0 }"
+                            aria-label="Infos limite AniList"
+                        >
+                            <div class="anilist-rate-title">AniList API (limite)</div>
+                            <div class="anilist-rate-line">
+                                <strong>{{ anilistRateInfo.remaining }}</strong> restantes / {{ anilistRateInfo.limit }} (fenêtre {{ anilistRateInfo.windowSec }}s)
+                            </div>
+                            <div class="anilist-rate-line">Reset ~ {{ anilistRateInfo.resetInSec }}s</div>
+                            <div v-if="anilistRateInfo.lastStatus" class="anilist-rate-line">Dernier status: {{ anilistRateInfo.lastStatus }}</div>
+                            <div v-if="anilistRateInfo.lastError" class="anilist-rate-error">{{ anilistRateInfo.lastError }}</div>
+                            <div class="anilist-rate-note">Estimation locale (pas un compteur officiel AniList).</div>
+                        </div>
                         <div class="create-list-section">
                             <label>Nom de l'anime :</label>
                             <div style="display:flex; gap:8px; align-items:center; position:relative;">
