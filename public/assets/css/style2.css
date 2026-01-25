@@ -305,10 +305,10 @@ body {
   z-index: 50;
   background: var(--color-card);
   border: 1px solid #ddd;
-  border-radius: 10px;
+  border-radius: 12px;
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.10);
   overflow: hidden;
-  max-height: 320px;
+  max-height: 360px;
   overflow-y: auto;
 }
 
@@ -321,25 +321,25 @@ body {
   display: flex;
   gap: 10px;
   align-items: center;
-  padding: 8px 10px;
+  padding: 10px 12px;
   cursor: pointer;
 }
 
 .header-search-item:hover,
 .header-search-item.active {
-  background: rgba(79, 140, 255, 0.12);
+  background: rgba(79, 140, 255, 0.14);
 }
 
 [data-theme="dark"] .header-search-item:hover,
 [data-theme="dark"] .header-search-item.active {
-  background: rgba(79, 140, 255, 0.18);
+  background: rgba(79, 140, 255, 0.20);
 }
 
 .header-search-thumb {
-  width: 34px;
-  height: 48px;
+  width: 38px;
+  height: 54px;
   object-fit: cover;
-  border-radius: 6px;
+  border-radius: 8px;
   flex: 0 0 auto;
 }
 
@@ -349,8 +349,8 @@ body {
 }
 
 .header-search-title {
-  font-size: 0.98rem;
-  font-weight: 700;
+  font-size: 1rem;
+  font-weight: 800;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -358,7 +358,7 @@ body {
 
 .header-search-sub {
   margin-top: 2px;
-  font-size: 0.88rem;
+  font-size: 0.9rem;
   color: #666;
   white-space: nowrap;
   overflow: hidden;
@@ -410,7 +410,6 @@ body {
   .header-left { flex-direction: column; gap: 4px; }
   .header-nav { margin-left: 0; }
   .header-left input[type="text"] { min-width: 100px; }
-  .header-search-wrap { margin-left: 0; width: 100%; max-width: none; }
 }
 .logo-minimal {
   height: 28px;
@@ -500,4 +499,313 @@ body {
   background: var(--color-bg);
   color: var(--color-text);
   margin-bottom: 4px;
+}
+
+/*
+  ==============================================
+  Style 2 (Mobile Portrait)
+  Objectif: UI agréable sur smartphone (vertical)
+  - typographie lisible
+  - boutons faciles à cliquer
+  - moins de “gros blocs” sur plusieurs lignes
+  - mise en colonne (1 colonne)
+  ==============================================
+*/
+
+body {
+  line-height: 1.35;
+  overflow-x: hidden;
+}
+
+/* ==============================
+   Anime detail (style2 only)
+   Objectif:
+   - masquer la description (mode normal)
+   - mettre les infos sous l'image
+   - réduire au maximum le scroll horizontal
+   ============================== */
+
+.anime-detail-view,
+.anime-detail-view * {
+  box-sizing: border-box;
+  max-width: 100%;
+}
+
+.anime-detail-view {
+  overflow-x: hidden;
+}
+
+/* Masque uniquement le texte de description (garde le textarea en mode édition) */
+.anime-detail-description-text {
+  display: none !important;
+}
+
+/* Layout sous l'image */
+.anime-detail-header {
+  flex-direction: column !important;
+  align-items: center !important;
+  gap: 14px !important;
+}
+
+.anime-detail-cover {
+  width: 150px !important;
+  height: 216px !important;
+}
+
+.anime-detail-info {
+  width: 100%;
+}
+
+/* Inputs/textarea inline -> éviter débordements */
+.anime-detail-info input,
+.anime-detail-info textarea {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+/* Textes longs (romaji, tags, etc.) -> wrap */
+.anime-detail-info {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* Mobile (portrait) */
+@media (max-width: 640px) {
+  /* Conteneur principal */
+  #app {
+    max-width: 100%;
+    margin: 10px auto;
+    padding: 14px;
+    border-radius: 12px;
+  }
+
+  /* Header: éviter les éléments trop étirés */
+  .main-header {
+    padding: 10px 12px;
+    gap: 10px;
+    align-items: stretch;
+  }
+
+  .header-left {
+    width: 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .header-title {
+    font-size: 1.2rem;
+    letter-spacing: 0.4px;
+  }
+
+  /* Champ recherche dans le header (style inline existant -> override) */
+  .header-left input[type="text"] {
+    width: 100% !important;
+    flex: 1 1 100%;
+    margin-left: 0 !important;
+    min-width: 0 !important;
+    padding: 10px 12px;
+    border-radius: 10px;
+    font-size: 1rem;
+  }
+
+  /* Autocomplete header : plein largeur + plus facile à toucher */
+  .header-search-wrap {
+    width: 100%;
+    max-width: none;
+    margin-left: 0;
+    flex: 1 1 100%;
+  }
+
+  .header-search-suggest {
+    border-radius: 14px;
+    max-height: 56vh;
+  }
+
+  .header-search-item {
+    padding: 12px 12px;
+  }
+
+  .header-search-thumb {
+    width: 44px;
+    height: 62px;
+    border-radius: 10px;
+  }
+
+  .header-nav {
+    width: 100%;
+    margin-left: 0;
+    gap: 8px;
+  }
+
+  .nav-btn {
+    flex: 1 1 0;
+    padding: 10px 12px;
+    font-size: 1rem;
+    border-radius: 10px;
+    text-align: center;
+  }
+
+  .header-right {
+    display: flex;
+    justify-content: flex-end;
+    width: 100%;
+  }
+
+  /* Boutons: “touch targets” plus grands */
+  .list-btn {
+    padding: 12px 14px;
+    border-radius: 10px;
+    font-size: 1rem;
+  }
+
+  /* Barre de recherche (pages listes) */
+  .search-bar {
+    gap: 10px;
+    margin: 16px 0 12px 0;
+    flex-direction: column;
+  }
+  .search-bar input[type="text"] {
+    width: 100%;
+    font-size: 1rem;
+    padding: 12px 12px;
+    border-radius: 10px;
+  }
+  .list-buttons {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  /* Cartes listes: 1 colonne, plus compact */
+  .list-cards {
+    flex-direction: column;
+    gap: 12px;
+  }
+  .list-card {
+    width: 100%;
+    min-width: 0;
+    min-height: 56px;
+    padding: 14px 16px;
+    font-size: 1.05rem;
+    border-radius: 12px;
+  }
+
+  /* Liste d'animes: 1 colonne */
+  .anime-list {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  /* Carte anime: format “ligne” (image à gauche, infos à droite) */
+  .anime-card {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    padding: 10px;
+    border-radius: 12px;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+  }
+  .anime-card img {
+    width: 72px;
+    height: 100px;
+    object-fit: cover;
+    border-radius: 10px;
+    margin-bottom: 0;
+    flex: 0 0 auto;
+  }
+
+  /* Modale “créer liste”: largeur quasi plein écran */
+  .modal-create-list {
+    max-width: 96%;
+    margin: 16px auto;
+    padding: 18px 16px 14px 16px;
+    border-radius: 14px;
+  }
+
+  /* Footer: colonnes empilées */
+  .footer-inner {
+    padding: 0 12px;
+    gap: 14px;
+  }
+  .footer-col {
+    min-width: 0;
+    width: 100%;
+  }
+  .footer-select {
+    max-width: none;
+  }
+
+  /* Confirm modal: boutons sur 1 colonne */
+  .confirm-modal-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .confirm-modal-actions .list-btn {
+    width: 100%;
+  }
+
+  /* Pages détails de listes: beaucoup de style inline -> override léger */
+  .list-detail-header {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: flex-start;
+  }
+
+  .list-detail-header h2,
+  .list-detail-header p {
+    flex: 1 1 100%;
+  }
+
+  /* Boutons du header de liste : compacts et sur la même ligne */
+  .list-detail-header .list-btn {
+    float: none !important;
+    width: auto !important;
+    margin: 0 !important;
+    padding: 6px 10px;
+    font-size: 0.92rem;
+    border-radius: 10px;
+    line-height: 1.1;
+  }
+
+  /* Le bouton "Retour" pousse le groupe à droite */
+  .list-detail-header .list-btn:first-of-type {
+    margin-left: auto !important;
+  }
+
+  .list-detail-header .list-btn + .list-btn {
+    margin-left: 6px !important;
+  }
+  .list-detail-searchbar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+  }
+  .list-detail-searchbar input,
+  .list-detail-searchbar select,
+  .list-detail-searchbar button {
+    width: 100% !important;
+  }
+}
+
+/* Très petits écrans */
+@media (max-width: 420px) {
+  #app {
+    margin: 8px auto;
+    padding: 12px;
+  }
+  .header-title {
+    font-size: 1.15rem;
+  }
+  .nav-btn {
+    font-size: 0.98rem;
+    padding: 10px 10px;
+  }
+  .anime-card img {
+    width: 66px;
+    height: 92px;
+  }
 }

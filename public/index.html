@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AniList App</title>
     <!-- CSS -->
-    <link rel="stylesheet" href="assets/css/style.css">
+    <link id="theme-css" rel="stylesheet" href="assets/css/style.css">
     <!-- Vue.js -->
     <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
 </head>
@@ -34,8 +34,13 @@
             </div>
 
             <div class="footer-col">
-                <div class="footer-col-title">Bientôt</div>
-                <span class="footer-muted">Plus de liens à venir…</span>
+                <div class="footer-col-title">Style</div>
+                <label class="footer-muted" for="css-theme-select">Choisir un CSS :</label>
+                <select id="css-theme-select" class="footer-select">
+                    <option value="assets/css/style.css">Classic (style.css)</option>
+                    <option value="assets/css/style2.css">Mobil (style2.css)</option>
+                </select>
+                <span class="footer-muted">(Le choix est sauvegardé)</span>
             </div>
         </div>
     </footer>
@@ -46,5 +51,32 @@
     <script src="assets/js/api.js"></script>
     <!-- App Logic JS -->
     <script src="assets/js/app.js"></script>
+
+    <!-- CSS Switcher (footer) -->
+    <script>
+        (function () {
+            const link = document.getElementById('theme-css');
+            const select = document.getElementById('css-theme-select');
+            if (!link || !select) return;
+
+            const storageKey = 'cssThemeHref';
+            const defaultHref = link.getAttribute('href') || 'assets/css/style.css';
+            const savedHref = localStorage.getItem(storageKey);
+
+            // Applique le thème sauvegardé au chargement (si présent)
+            if (savedHref) {
+                link.setAttribute('href', savedHref);
+            }
+
+            // Synchronise la valeur du select (même si on est resté sur le défaut)
+            select.value = link.getAttribute('href') || defaultHref;
+
+            select.addEventListener('change', function () {
+                const href = select.value;
+                link.setAttribute('href', href);
+                localStorage.setItem(storageKey, href);
+            });
+        })();
+    </script>
 </body>
 </html>

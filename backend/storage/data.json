@@ -1,4 +1,42 @@
 {
-    "anime": [],
-    "lists": []
+    "anime": [
+        {
+            "id": 1,
+            "id_anilist": 114126,
+            "title": "SUN",
+            "title_romaji": "SUN",
+            "episodes": 1,
+            "progress": {
+                "episode": 0,
+                "minute": 0,
+                "status": "plan_to_watch"
+            },
+            "status": "FINISHED",
+            "season": 1,
+            "tags": [
+                "Psychological"
+            ],
+            "description": "Music video directed by Kakeru Mizui for the song SUN by instrumental band tio in their 10th anniversary album \"Tiny Island Orchestra.\"",
+            "pics": "https:\/\/s4.anilist.co\/file\/anilistcdn\/media\/anime\/cover\/medium\/b114126-qV2yYC5GodrR.jpg",
+            "star": "2.2",
+            "my_star": null,
+            "last_view": 1769355576,
+            "other1": ""
+        }
+    ],
+    "lists": [
+        {
+            "id": 1,
+            "order": 1,
+            "code1": 0,
+            "name": "Tt",
+            "color": "#4f8cff",
+            "description": "",
+            "animes": [
+                {
+                    "id": 1
+                }
+            ]
+        }
+    ]
 }
