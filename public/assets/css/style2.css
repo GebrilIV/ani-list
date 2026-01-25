@@ -283,6 +283,91 @@ body {
 .header-right button:hover {
   color: var(--color-accent);
 }
+
+/* Autocomplete (recherche header - local) */
+.header-search-wrap {
+  position: relative;
+  margin-left: 16px;
+  flex: 1 1 320px;
+  max-width: 360px;
+}
+
+.header-search-wrap input[type="text"] {
+  width: 100%;
+  margin-left: 0;
+}
+
+.header-search-suggest {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 50;
+  background: var(--color-card);
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.10);
+  overflow: hidden;
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+[data-theme="dark"] .header-search-suggest {
+  background: #23272a;
+  border-color: #333;
+}
+
+.header-search-item {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 12px;
+  cursor: pointer;
+}
+
+.header-search-item:hover,
+.header-search-item.active {
+  background: rgba(79, 140, 255, 0.14);
+}
+
+[data-theme="dark"] .header-search-item:hover,
+[data-theme="dark"] .header-search-item.active {
+  background: rgba(79, 140, 255, 0.20);
+}
+
+.header-search-thumb {
+  width: 38px;
+  height: 54px;
+  object-fit: cover;
+  border-radius: 8px;
+  flex: 0 0 auto;
+}
+
+.header-search-meta {
+  min-width: 0;
+  flex: 1;
+}
+
+.header-search-title {
+  font-size: 1rem;
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.header-search-sub {
+  margin-top: 2px;
+  font-size: 0.9rem;
+  color: #666;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+[data-theme="dark"] .header-search-sub {
+  color: #b8b8b8;
+}
 /* Barre de recherche et boutons de listes */
 .search-bar {
   display: flex;
@@ -525,6 +610,29 @@ body {
     font-size: 1rem;
   }
 
+  /* Autocomplete header : plein largeur + plus facile à toucher */
+  .header-search-wrap {
+    width: 100%;
+    max-width: none;
+    margin-left: 0;
+    flex: 1 1 100%;
+  }
+
+  .header-search-suggest {
+    border-radius: 14px;
+    max-height: 56vh;
+  }
+
+  .header-search-item {
+    padding: 12px 12px;
+  }
+
+  .header-search-thumb {
+    width: 44px;
+    height: 62px;
+    border-radius: 10px;
+  }
+
   .header-nav {
     width: 100%;
     margin-left: 0;
@@ -640,10 +748,36 @@ body {
   }
 
   /* Pages détails de listes: beaucoup de style inline -> override léger */
+  .list-detail-header {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: flex-start;
+  }
+
+  .list-detail-header h2,
+  .list-detail-header p {
+    flex: 1 1 100%;
+  }
+
+  /* Boutons du header de liste : compacts et sur la même ligne */
   .list-detail-header .list-btn {
     float: none !important;
-    width: 100%;
-    margin: 8px 0 0 0 !important;
+    width: auto !important;
+    margin: 0 !important;
+    padding: 6px 10px;
+    font-size: 0.92rem;
+    border-radius: 10px;
+    line-height: 1.1;
+  }
+
+  /* Le bouton "Retour" pousse le groupe à droite */
+  .list-detail-header .list-btn:first-of-type {
+    margin-left: auto !important;
+  }
+
+  .list-detail-header .list-btn + .list-btn {
+    margin-left: 6px !important;
   }
   .list-detail-searchbar {
     flex-direction: column !important;
