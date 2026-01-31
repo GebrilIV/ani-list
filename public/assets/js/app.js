@@ -40,17 +40,19 @@ const app = new Vue({
         animeSuggestionSelected: null, // Suggestion sélectionnée
         animeSuggestionError: '', // Erreur dans les suggestions
         animeSuggestionDropdown: false, // Dropdown des suggestions
-        // AniList rate limit (estimation locale)
+        // AniList rate limit (headers HTTP)
+        // Voir: https://docs.anilist.co/guide/rate-limiting
         anilistRate: {
-            limit: 30, // README: 30 requêtes / minute
-            windowMs: 60_000,
-            calls: [], // timestamps (ms)
+            limit: null, // X-RateLimit-Limit
+            remaining: null, // X-RateLimit-Remaining
+            resetAt: null, // X-RateLimit-Reset (unix seconds)
+            retryAfterSec: null, // Retry-After (seconds)
             lastStatus: null,
             lastError: '',
             lastRequestAt: null,
             lastResponseAt: null,
         },
-        anilistRateTick: 0, // pour rafraîchir l'affichage (compte à rebours)
+        anilistRateTick: 0, // rafraîchit le compte à rebours (reset/retry-after)
         newAnimeListId: null, // ID de la liste pour ajout
         animeInfo: null, // Infos détaillées d'un anime
         animeFields: { // Champs pour un nouvel anime
@@ -86,6 +88,7 @@ const app = new Vue({
         editProgressStatus: 'watching', // Statut en édition
         editTitle: '', // Titre en édition
         editDescription: '', // Synopsis en édition
+        editSeasonInput: '', // Saison en édition (accepte 1, 2.5, 2,5)
         // Note perso
         editMyStarMode: false, // Mode édition note perso
         editMyStarValue: null, // Valeur note perso
@@ -104,31 +107,26 @@ const app = new Vue({
         confirmMessage: '',
     },
     computed: {
-        anilistRateInfo() { // infos calculées (estimation locale)
-            // dépendance pour re-render (compte à rebours)
+        anilistRateInfo() { // infos calculées (headers HTTP)
             void this.anilistRateTick;
 
-            const now = Date.now();
-            const limit = (this.anilistRate && typeof this.anilistRate.limit === 'number') ? this.anilistRate.limit : 30;
-            const windowMs = (this.anilistRate && typeof this.anilistRate.windowMs === 'number') ? this.anilistRate.windowMs : 60000;
-            const calls = (this.anilistRate && Array.isArray(this.anilistRate.calls)) ? this.anilistRate.calls : [];
+            const nowSec = Math.floor(Date.now() / 1000);
+            const limit = (this.anilistRate && Number.isFinite(this.anilistRate.limit)) ? this.anilistRate.limit : null;
+            const remaining = (this.anilistRate && Number.isFinite(this.anilistRate.remaining)) ? this.anilistRate.remaining : null;
+            const resetAt = (this.anilistRate && Number.isFinite(this.anilistRate.resetAt)) ? this.anilistRate.resetAt : null;
+            const retryAfterSec = (this.anilistRate && Number.isFinite(this.anilistRate.retryAfterSec)) ? this.anilistRate.retryAfterSec : null;
 
-            const pruned = calls.filter(ts => typeof ts === 'number' && (now - ts) < windowMs);
-            const used = pruned.length;
-            const remaining = Math.max(0, limit - used);
-
-            const oldest = pruned.length > 0 ? pruned[0] : null;
-            const resetInMs = oldest ? Math.max(0, windowMs - (now - oldest)) : 0;
+            const resetInSec = resetAt ? Math.max(0, resetAt - nowSec) : 0;
 
             const lastStatus = this.anilistRate ? this.anilistRate.lastStatus : null;
             const lastError = this.anilistRate ? (this.anilistRate.lastError || '') : '';
 
             return {
                 limit,
-                windowSec: Math.round(windowMs / 1000),
-                used,
                 remaining,
-                resetInSec: resetInMs ? Math.ceil(resetInMs / 1000) : 0,
+                resetAt,
+                resetInSec,
+                retryAfterSec,
                 lastStatus,
                 lastError,
             };
@@ -276,6 +274,17 @@ const app = new Vue({
         },
     },
     methods: {
+        normalizeSeasonInput(value, fallback = null) {
+            if (value === null || typeof value === 'undefined') return fallback;
+            const s = String(value).trim();
+            if (!s) return fallback;
+            const cleaned = s.replace(',', '.');
+            const n = Number(cleaned);
+            if (!Number.isFinite(n) || n <= 0) return fallback;
+            const rounded = Math.round(n);
+            if (Math.abs(n - rounded) < 1e-9) return rounded;
+            return n;
+        },
         // Normalise une chaîne pour la recherche (minuscule, sans accents, espaces propres)
         normalizeSearchText(str) {
             const s = (str || '').toString().trim().toLowerCase();
@@ -637,7 +646,7 @@ const app = new Vue({
                     tags: this.animeFields.tags ? this.animeFields.tags.split(',').map(t=>t.trim()) : [],
                     pics: this.animeFields.pics,
                     description: this.animeFields.description,
-                    season: this.newAnimeSeason ? parseInt(this.newAnimeSeason) : 1,
+                    season: this.normalizeSeasonInput(this.newAnimeSeason, 1),
                     episode: this.newAnimeEpisode ? parseInt(this.newAnimeEpisode) : 0,
                     minute: this.newAnimeMinute ? parseInt(this.newAnimeMinute) : 0,
                     progress_status: this.newAnimeProgressStatus,
@@ -705,19 +714,9 @@ const app = new Vue({
             this.listSearch = '';
             this.listStatusFilters = [];
         },
-        pruneAniListCalls() {
-            const now = Date.now();
-            const windowMs = (this.anilistRate && typeof this.anilistRate.windowMs === 'number') ? this.anilistRate.windowMs : 60000;
-            const calls = (this.anilistRate && Array.isArray(this.anilistRate.calls)) ? this.anilistRate.calls : [];
-            const pruned = calls.filter(ts => typeof ts === 'number' && (now - ts) < windowMs);
-            if (this.anilistRate) this.anilistRate.calls = pruned;
-        },
         trackAniListRequest() {
-            this.pruneAniListCalls();
             if (!this.anilistRate) return;
             const now = Date.now();
-            if (!Array.isArray(this.anilistRate.calls)) this.anilistRate.calls = [];
-            this.anilistRate.calls.push(now);
             this.anilistRate.lastRequestAt = now;
             this.anilistRate.lastError = '';
             this.anilistRate.lastStatus = null;
@@ -726,6 +725,31 @@ const app = new Vue({
             if (!this.anilistRate) return;
             this.anilistRate.lastResponseAt = Date.now();
             if (res && typeof res.status === 'number') this.anilistRate.lastStatus = res.status;
+
+            // Headers AniList (si exposés via CORS)
+            // - X-RateLimit-Limit
+            // - X-RateLimit-Remaining
+            // - Retry-After (sur 429)
+            // - X-RateLimit-Reset (sur 429)
+            try {
+                const limitRaw = res && res.headers ? res.headers.get('X-RateLimit-Limit') : null;
+                const remainingRaw = res && res.headers ? res.headers.get('X-RateLimit-Remaining') : null;
+                const retryAfterRaw = res && res.headers ? res.headers.get('Retry-After') : null;
+                const resetRaw = res && res.headers ? res.headers.get('X-RateLimit-Reset') : null;
+
+                const limit = limitRaw !== null ? parseInt(limitRaw, 10) : NaN;
+                const remaining = remainingRaw !== null ? parseInt(remainingRaw, 10) : NaN;
+                const retryAfterSec = retryAfterRaw !== null ? parseInt(retryAfterRaw, 10) : NaN;
+                const resetAt = resetRaw !== null ? parseInt(resetRaw, 10) : NaN;
+
+                if (Number.isFinite(limit)) this.anilistRate.limit = limit;
+                if (Number.isFinite(remaining)) this.anilistRate.remaining = remaining;
+                if (Number.isFinite(retryAfterSec)) this.anilistRate.retryAfterSec = retryAfterSec;
+                if (Number.isFinite(resetAt)) this.anilistRate.resetAt = resetAt;
+            } catch (e) {
+                // ignore header parsing errors
+            }
+
             if (res && res.ok === false) {
                 if (res.status === 429) this.anilistRate.lastError = 'Limite atteinte (HTTP 429)';
                 else this.anilistRate.lastError = `Erreur AniList (HTTP ${res.status})`;
@@ -833,6 +857,8 @@ const app = new Vue({
             this.editProgressStatus = (anime.progress && anime.progress.status) ? anime.progress.status : 'watching';
             this.editTitle = anime.title || '';
             this.editDescription = anime.description || '';
+            const seasonVal = (anime && typeof anime.season !== 'undefined' && anime.season !== null && anime.season !== '') ? anime.season : 1;
+            this.editSeasonInput = String(seasonVal);
             // reset note perso (évite confusion)
             this.editMyStarMode = false;
             // Cherche other1 dans progress, puis à la racine
@@ -876,6 +902,17 @@ const app = new Vue({
             // Met à jour l'anime dans this.animes
             const idx = this.animes.findIndex(a => a.id === this.selectedAnimeId);
             if (idx !== -1) {
+                // Saison: ne pas corrompre (accepte 1, 2.5, 2,5). Si vide => ne change pas.
+                const seasonStr = (this.editSeasonInput === null || typeof this.editSeasonInput === 'undefined') ? '' : String(this.editSeasonInput).trim();
+                let normalizedSeason = null;
+                if (seasonStr !== '') {
+                    normalizedSeason = this.normalizeSeasonInput(seasonStr, null);
+                    if (normalizedSeason === null) {
+                        this.error = "Saison invalide. Ex: 1, 2.5, 2,5";
+                        return;
+                    }
+                }
+
                 if (!this.animes[idx].progress) this.animes[idx].progress = {};
                 this.animes[idx].progress.episode = this.editProgressEpisode;
                 this.animes[idx].progress.minute = this.editProgressMinute;
@@ -883,11 +920,14 @@ const app = new Vue({
                 this.animes[idx].progress.status = this.editProgressStatus;
                 this.animes[idx].title = this.editTitle;
                 this.animes[idx].description = this.editDescription;
+                if (normalizedSeason !== null) {
+                    this.animes[idx].season = normalizedSeason;
+                }
                 // Met à jour last_view avec la date/heure/minute actuelle
                 this.animes[idx].last_view = Math.floor(Date.now() / 1000);
                 // Enregistre dans data.json via l'API PATCH
                 try {
-                    await patchAnime(this.selectedAnimeId, {
+                    const patchPayload = {
                         title: this.editTitle,
                         description: this.editDescription,
                         progress: {
@@ -897,7 +937,11 @@ const app = new Vue({
                             status: this.editProgressStatus,
                         },
                         last_view: this.animes[idx].last_view
-                    });
+                    };
+                    if (normalizedSeason !== null) {
+                        patchPayload.season = normalizedSeason;
+                    }
+                    await patchAnime(this.selectedAnimeId, patchPayload);
                     // Recharge la liste des animes pour être sûr
                     await this.fetchAnimes();
                 } catch (e) {
@@ -1080,12 +1124,18 @@ const app = new Vue({
                         >
                             <div class="anilist-rate-title">AniList API (limite)</div>
                             <div class="anilist-rate-line">
-                                <strong>{{ anilistRateInfo.remaining }}</strong> restantes / {{ anilistRateInfo.limit }} (fenêtre {{ anilistRateInfo.windowSec }}s)
+                                <template v-if="anilistRateInfo.limit !== null && anilistRateInfo.remaining !== null">
+                                    <strong>{{ anilistRateInfo.remaining }}</strong> restantes / {{ anilistRateInfo.limit }}
+                                </template>
+                                <template v-else>
+                                    <strong>—</strong> (fais une requête AniList)
+                                </template>
                             </div>
-                            <div class="anilist-rate-line">Reset ~ {{ anilistRateInfo.resetInSec }}s</div>
+                            <div v-if="anilistRateInfo.resetAt" class="anilist-rate-line">Reset ~ {{ anilistRateInfo.resetInSec }}s</div>
+                            <div v-else-if="anilistRateInfo.retryAfterSec" class="anilist-rate-line">Retry-After: {{ anilistRateInfo.retryAfterSec }}s</div>
                             <div v-if="anilistRateInfo.lastStatus" class="anilist-rate-line">Dernier status: {{ anilistRateInfo.lastStatus }}</div>
                             <div v-if="anilistRateInfo.lastError" class="anilist-rate-error">{{ anilistRateInfo.lastError }}</div>
-                            <div class="anilist-rate-note">Estimation locale (pas un compteur officiel AniList).</div>
+                            <div class="anilist-rate-note">Données lues depuis les headers (X-RateLimit-* / Retry-After).</div>
                         </div>
                         <div class="create-list-section">
                             <label>Nom de l'anime :</label>
@@ -1137,7 +1187,7 @@ const app = new Vue({
                         <div class="create-list-section">
                             <label>Progression (facultatif) :</label>
                             <div style="display:flex; gap:8px; align-items:center;">
-                                <input type="number" v-model="newAnimeSeason" min="1" placeholder="Saison" style="width:70px;" />
+                                <input type="text" v-model="newAnimeSeason" inputmode="decimal" placeholder="Saison" style="width:70px;" />
                                 <input type="number" v-model="newAnimeEpisode" min="1" placeholder="Épisode" style="width:90px;" />
                                 <input type="number" v-model="newAnimeMinute" min="0" placeholder="Minute" style="width:90px;" />
                             </div>
@@ -1332,6 +1382,13 @@ const app = new Vue({
                                         {{ opt.label }}
                                     </button>
                                 </div>
+                            </span>
+                        </div>
+                        <div style="margin-bottom:12px;">
+                            <span style="font-weight:600; color:#888;">Saison :</span>
+                            <span v-if="!editProgressMode">{{ (typeof getAnime(selectedAnimeId).season !== 'undefined' && getAnime(selectedAnimeId).season !== null && getAnime(selectedAnimeId).season !== '') ? getAnime(selectedAnimeId).season : 1 }}</span>
+                            <span v-else>
+                                <input type="text" v-model="editSeasonInput" inputmode="decimal" style="width:90px;" placeholder="1 / 2,5" />
                             </span>
                         </div>
                         <div style="margin-bottom:12px;">

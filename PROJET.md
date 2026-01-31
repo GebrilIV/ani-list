@@ -88,6 +88,11 @@ delete anime/liste
 mobil css
 header search bar
 
+# D9 - 01.02.26:
+modif season
+
+
+
 
 
 

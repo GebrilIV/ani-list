@@ -42,13 +42,31 @@ return function ($app) {
         return (float)number_format($v, 1, '.', '');
     };
 
+    $normalizeSeason = function ($value) {
+        if ($value === null) return null;
+        if (is_string($value)) {
+            $value = str_replace(',', '.', trim($value));
+            if ($value === '') return null;
+        }
+        if (!is_numeric($value)) return null;
+        $v = (float)$value;
+        // évite les valeurs négatives / nulles bizarres
+        if ($v <= 0) return null;
+
+        // Conserver un int si possible (compatibilité ancienne + JSON plus propre)
+        if (abs($v - round($v)) < 1e-9) {
+            return (int)round($v);
+        }
+        return (float)$v;
+    };
+
     $app->get('/anime', function (Request $request, Response $response) {
         $data = json_decode(file_get_contents(__DIR__ . '/../storage/data.json'), true);
         $response->getBody()->write(json_encode($data['anime'] ?? []));
         return $response->withHeader('Content-Type', 'application/json');
     });
 
-    $app->post('/anime', function (Request $request, Response $response) use ($normalizeProgressStatus, $normalizeMyStar) {
+    $app->post('/anime', function (Request $request, Response $response) use ($normalizeProgressStatus, $normalizeMyStar, $normalizeSeason) {
         $params = json_decode($request->getBody()->getContents(), true);
         $file = __DIR__ . '/../storage/data.json';
         $data = json_decode(file_get_contents($file), true);
@@ -72,7 +90,7 @@ return function ($app) {
         $tags = $params['tags'] ?? [];
         $pics = $params['pics'] ?? '';
         $description = $params['description'] ?? '';
-        $season = (int)($params['season'] ?? 1);
+        $season = $normalizeSeason($params['season'] ?? null) ?? 1;
         $episode = (int)($params['episode'] ?? 0);
         $minute = (int)($params['minute'] ?? 0);
         $listId = (int)($params['listId'] ?? 0);
@@ -134,7 +152,7 @@ return function ($app) {
     });
 
     // PATCH /anime/{id} : met à jour la progression d'un anime
-    $app->patch('/anime/{id}', function (Request $request, Response $response, $args) use ($normalizeProgressStatus, $normalizeMyStar) {
+    $app->patch('/anime/{id}', function (Request $request, Response $response, $args) use ($normalizeProgressStatus, $normalizeMyStar, $normalizeSeason) {
         $id = (int)$args['id'];
         $params = json_decode($request->getBody()->getContents(), true);
         $file = __DIR__ . '/../storage/data.json';
@@ -169,6 +187,14 @@ return function ($app) {
                 if (isset($params['title'])) $anime['title'] = $params['title'];
                 if (isset($params['title_romaji'])) $anime['title_romaji'] = $params['title_romaji'];
                 if (isset($params['description'])) $anime['description'] = $params['description'];
+
+                // Saison (optionnel) : accepte 1, 2.5, "2,5" etc. Ne pas écraser si invalide.
+                if (array_key_exists('season', $params)) {
+                    $normalizedSeason = $normalizeSeason($params['season']);
+                    if ($normalizedSeason !== null) {
+                        $anime['season'] = $normalizedSeason;
+                    }
+                }
 
                 // Note perso (my_star)
                 if (array_key_exists('my_star', $params) || array_key_exists('myStar', $params)) {
