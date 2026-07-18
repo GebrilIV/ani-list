@@ -1,0 +1,20 @@
+
+liste des API a ajoutés :
+
+1 anilist (deja present dans projet)
+https://docs.anilist.co/
+
+2. myanimelist (OAuth2)
+https://api.myanimelist.net/v2
+https://myanimelist.net/apiconfig/references/api/v2
+
+3. jikan (API REST)
+https://jikan.moe/
+
+4. kitsu (JSON:API)
+https://api-docs.kitsu.cloud/
+https://kitsu.docs.apiary.io/
+
+---
+
+(https://animeschedule.net/)
