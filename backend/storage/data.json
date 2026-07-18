@@ -1,4 +1,14 @@
 {
     "anime": [],
-    "lists": []
+    "lists": [
+        {
+            "id": 1,
+            "order": 1,
+            "code1": 0,
+            "name": "test1",
+            "color": "#4f8cff",
+            "description": "",
+            "animes": []
+        }
+    ]
 }

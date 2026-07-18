@@ -13,7 +13,7 @@ $app->add(function ($request, $handler) {
         return $handler->handle($request);
     }
     // Si c'est une route backend/API, laisser Slim gérer
-    if (preg_match('#^/(anime|lists|test|backend)#', $uri)) {
+    if (preg_match('#^/(anime|lists|test|backend|search|providers)\b#', $uri)) {
         return $handler->handle($request);
     }
     // Si c'est la racine ou index.html, servir le HTML
@@ -35,6 +35,8 @@ $animeRoutes = require __DIR__ . '/../backend/routes/anime.php';
 $animeRoutes($app);
 $listsRoutes = require __DIR__ . '/../backend/routes/lists.php';
 $listsRoutes($app);
+$apiRoutes = require __DIR__ . '/../backend/routes/api.php';
+$apiRoutes($app);
 
 // Route de base pour test
 $app->get('/test', function ($request, $response) {

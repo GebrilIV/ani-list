@@ -31,19 +31,17 @@ Anime List est une application simple et rapide pour gérer vos listes d’anime
 
 ---
 
-## 📄 Documentation & détails
-
-Pour plus d’informations sur la structure, les objectifs et les choix techniques, consultez :
-- [`PROJET.md`](./PROJET.md)
-
----
-
 ## 🛠️ Stack technique
 
-- **Frontend :** Vue.js, HTML, CSS (SPA)
-- **Backend :** PHP (Slim 4), stockage JSON local
-- **API :** [AniList](https://anilist.co/) (données enrichies)
-  > **Note :** L'API AniList a une limite de 30 requêtes par minute. Si le système d'ajout d'anime ne fonctionne pas temporairement, cela peut être dû à cette limite. Veuillez patienter avant de réessayer.
+- **Frontend :** [Vue.js](https://vuejs.org/)
+- **Backend :** [(Slim 4)](https://www.slimframework.com/), stockage JSON local
+- **API :**
+  - [AniList](https://docs.anilist.co/) 
+  - [MyAnimeList](https://myanimelist.net/apiconfig/references/api/v2) 
+  - [Jikan](https://jikan.moe/)
+  - [Kitsu](https://kitsu.docs.apiary.io/)
+
+  > **Note :** L'application prend en charge plusieurs API. Certaines API peuvent être soumises à des limites de requêtes (rate limits), nécessiter une key ou être temporairement indisponibles. Dans ce cas, une autre API compatible peut être utilisée.
 
 ---
 

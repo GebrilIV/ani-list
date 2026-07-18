@@ -39,8 +39,20 @@ function getInitialData() {
         animeSuggestionSelected: null, // Suggestion sélectionnée
         animeSuggestionError: '', // Erreur dans les suggestions
         animeSuggestionDropdown: false, // Dropdown des suggestions
-        // AniList rate limit (headers HTTP)
-        // Voir: https://docs.anilist.co/guide/rate-limiting
+        // Multi-API support
+        selectedApiProvider: 'anilist', // Provider sélectionné (anilist|jikan|myanimelist|kitsu)
+        availableProviders: [], // Providers chargés depuis backend
+        
+        // Rate limits par provider
+        apiRateInfo: {
+            anilist: { limit: null, remaining: null, resetAt: null, retryAfter: null },
+            jikan: { limit: null, remaining: null, resetAt: null, retryAfter: null },
+            myanimelist: { limit: null, remaining: null, resetAt: null, retryAfter: null },
+            kitsu: { limit: null, remaining: null, resetAt: null, retryAfter: null }
+        },
+        apiRateTick: 0, // Rafraîchit les comptes à rebours
+        
+        // Backward compat
         anilistRate: {
             limit: null, // X-RateLimit-Limit
             remaining: null, // X-RateLimit-Remaining

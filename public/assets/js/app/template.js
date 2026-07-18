@@ -106,26 +106,64 @@ function getTemplate() {
                 <h2>Ajouter un anime</h2>
                 <div class="add-anime-layout">
                     <div class="add-anime-form">
+                        <!-- API Provider Selection -->
+                        <div class="create-list-section" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 16px; border-radius: 8px; margin-bottom: 16px;">
+                            <label style="color: #fff; font-weight: 600; margin-bottom: 8px; display: block;">Choisir l'API source :</label>
+                            <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                                <button
+                                    v-for="provider in availableProviders"
+                                    :key="provider.id"
+                                    :disabled="!provider.enabled"
+                                    @click="selectedApiProvider = provider.id; ApiManager.selectProvider(provider.id);"
+                                    :style="{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '8px',
+                                        padding: '10px 14px',
+                                        border: '2px solid ' + (selectedApiProvider === provider.id ? '#fff' : 'rgba(255,255,255,0.3)'),
+                                        background: selectedApiProvider === provider.id ? 'rgba(255,255,255,0.2)' : 'transparent',
+                                        color: '#fff',
+                                        borderRadius: '6px',
+                                        cursor: provider.enabled ? 'pointer' : 'not-allowed',
+                                        fontWeight: provider.enabled ? (selectedApiProvider === provider.id ? 'bold' : '500') : '400',
+                                        opacity: provider.enabled ? 1 : 0.5,
+                                        transition: 'all 0.2s ease',
+                                        fontSize: '0.95rem'
+                                    }"
+                                    :title="!provider.enabled ? 'Credentials manquants' : provider.rateLimit"
+                                >
+                                    <span v-if="provider.logo" style="width: 20px; height: 20px; display: flex; align-items: center; justify-content: center;">
+                                        <img :src="'assets/css/others/' + provider.logo" :alt="provider.name" style="max-width: 100%; max-height: 100%; object-fit: contain;" />
+                                    </span>
+                                    <span>{{ provider.name }}</span>
+                                </button>
+                            </div>
+                            <div style="color: rgba(255,255,255,0.9); font-size: 0.85rem; margin-top: 8px;">
+                                <strong>Limite:</strong> {{ availableProviders.find(p => p.id === selectedApiProvider)?.rateLimit || '—' }}
+                                {{ availableProviders.find(p => p.id === selectedApiProvider)?.description ? ' • ' + availableProviders.find(p => p.id === selectedApiProvider).description : '' }}
+                            </div>
+                        </div>
+
+                        <!-- Provider Rate Limit Info -->
                         <div
                             class="anilist-rate-box"
-                            :class="{ 'is-warning': anilistRateInfo.lastStatus === 429 || anilistRateInfo.remaining === 0 }"
-                            aria-label="Infos limite AniList"
+                            :class="{ 'is-warning': (apiRateInfo[selectedApiProvider]?.remaining === 0) }"
+                            aria-label="Infos limite API"
                         >
-                            <div class="anilist-rate-title">AniList API (limite)</div>
+                            <div class="anilist-rate-title">{{ (availableProviders.find(p => p.id === selectedApiProvider)?.name || 'API') }} - Limite</div>
                             <div class="anilist-rate-line">
-                                <template v-if="anilistRateInfo.limit !== null && anilistRateInfo.remaining !== null">
-                                    <strong>{{ anilistRateInfo.remaining }}</strong> restantes / {{ anilistRateInfo.limit }}
+                                <template v-if="apiRateInfo[selectedApiProvider]?.limit !== null && apiRateInfo[selectedApiProvider]?.remaining !== null">
+                                    <strong>{{ apiRateInfo[selectedApiProvider].remaining }}</strong> restantes / {{ apiRateInfo[selectedApiProvider].limit }}
                                 </template>
                                 <template v-else>
-                                    <strong>—</strong> (fais une requête AniList)
+                                    <strong>—</strong> (fais une requête pour charger)
                                 </template>
                             </div>
-                            <div v-if="anilistRateInfo.resetAt" class="anilist-rate-line">Reset ~ {{ anilistRateInfo.resetInSec }}s</div>
-                            <div v-else-if="anilistRateInfo.retryAfterSec" class="anilist-rate-line">Retry-After: {{ anilistRateInfo.retryAfterSec }}s</div>
-                            <div v-if="anilistRateInfo.lastStatus" class="anilist-rate-line">Dernier status: {{ anilistRateInfo.lastStatus }}</div>
-                            <div v-if="anilistRateInfo.lastError" class="anilist-rate-error">{{ anilistRateInfo.lastError }}</div>
-                            <div class="anilist-rate-note">Données lues depuis les headers (X-RateLimit-* / Retry-After).</div>
+                            <div v-if="apiRateInfo[selectedApiProvider]?.resetAt" class="anilist-rate-line">Reset ~ {{ Math.max(0, Math.floor((apiRateInfo[selectedApiProvider].resetAt * 1000 - Date.now()) / 1000)) }}s</div>
+                            <div v-else-if="apiRateInfo[selectedApiProvider]?.retryAfter" class="anilist-rate-line">Retry-After: {{ apiRateInfo[selectedApiProvider].retryAfter }}s</div>
+                            <div class="anilist-rate-note">Mise à jour automatique lors des recherches.</div>
                         </div>
+
                         <div class="create-list-section">
                             <label>Nom de l'anime :</label>
                             <div style="display:flex; gap:8px; align-items:center; position:relative;">
@@ -147,7 +185,7 @@ function getTemplate() {
                                     <div v-if="animeSuggestionLoading" :style="{padding:'8px', color:'#888'}">Chargement...</div>
                                     <div v-else-if="animeSuggestions.length === 0" :style="{padding:'8px', color:'#888'}">Aucun résultat</div>
                                     <div v-else>
-                                        <div v-for="s in animeSuggestions" :key="s.id" @mousedown.prevent="selectAnimeSuggestion(s)"
+                                        <div v-for="s in animeSuggestions" :key="s.sourceApi + ':' + s.sourceId" @mousedown.prevent="selectAnimeSuggestion(s)"
                                             :style="{
                                                 display: 'flex',
                                                 alignItems: 'center',
@@ -158,12 +196,15 @@ function getTemplate() {
                                                 color: isDarkTheme ? '#f5f5f5' : '#23272a',
                                                 background: 'transparent'
                                             }">
-                                            <img :src="s.coverImage.medium" alt="cover" style="width:36px; height:36px; object-fit:cover; border-radius:4px;" />
-                                            <span>{{ s.title.romaji }}</span>
+                                            <img :src="s.coverImage !== 'X' ? s.coverImage : 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2236%22 height=%2236%22><rect fill=%22%23ccc%22 width=%2236%22 height=%2236%22/></svg>'" alt="cover" style="width:36px; height:36px; object-fit:cover; border-radius:4px;" />
+                                            <div style="flex: 1;">
+                                                <div style="font-weight: 500;">{{ s.title }}</div>
+                                                <div style="font-size: 0.85em; opacity: 0.7;">{{ s.sourceApi.toUpperCase() }}{{ s.episodes ? ' - ' + s.episodes + ' ep' : '' }}</div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                                <img v-if="animeSuggestionSelected && animeSuggestionSelected.image" :src="animeSuggestionSelected.image" alt="cover" style="width:48px; height:48px; object-fit:cover; border-radius:6px; margin-left:12px;" />
+                                <img v-if="animeSuggestionSelected && animeSuggestionSelected.coverImage && animeSuggestionSelected.coverImage !== 'X'" :src="animeSuggestionSelected.coverImage" alt="cover" style="width:48px; height:48px; object-fit:cover; border-radius:6px; margin-left:12px;" />
                             </div>
                             <div v-if="doublonCount > 0" style="color:#d9534f; font-size:0.95em; margin-top:2px;">{{ doublonCount }} doublon{{ doublonCount > 1 ? 's' : '' }} trouvé{{ doublonCount > 1 ? 's' : '' }}</div>
                         </div>
@@ -213,7 +254,7 @@ function getTemplate() {
                             color: isDarkTheme ? '#f5f5f5' : '#23272a'
                         }">
                             <h3 style="margin-top:0; margin-bottom:12px; font-size:1.15rem; font-weight:600;">info sur l'anime</h3>
-                            <div>id_anilist: <input type="text" v-model="animeFields.id_anilist" style="width:90%;" /></div>
+                            <div>id: <input type="text" v-model="animeFields.id_anilist" style="width:90%;" /></div>
                             <div>title: <input type="text" v-model="animeFields.title" style="width:90%;" /></div>
                             <div>title_romaji: <input type="text" v-model="animeFields.title_romaji" style="width:90%;" /></div>
                             <div>episodes: <input type="text" v-model="animeFields.episodes" style="width:90%;" /></div>
