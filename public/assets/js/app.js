@@ -40,6 +40,19 @@ const app = new Vue({
         animeSuggestionSelected: null, // Suggestion sélectionnée
         animeSuggestionError: '', // Erreur dans les suggestions
         animeSuggestionDropdown: false, // Dropdown des suggestions
+        // AniList rate limit (headers HTTP)
+        // Voir: https://docs.anilist.co/guide/rate-limiting
+        anilistRate: {
+            limit: null, // X-RateLimit-Limit
+            remaining: null, // X-RateLimit-Remaining
+            resetAt: null, // X-RateLimit-Reset (unix seconds)
+            retryAfterSec: null, // Retry-After (seconds)
+            lastStatus: null,
+            lastError: '',
+            lastRequestAt: null,
+            lastResponseAt: null,
+        },
+        anilistRateTick: 0, // rafraîchit le compte à rebours (reset/retry-after)
         newAnimeListId: null, // ID de la liste pour ajout
         animeInfo: null, // Infos détaillées d'un anime
         animeFields: { // Champs pour un nouvel anime
@@ -75,6 +88,7 @@ const app = new Vue({
         editProgressStatus: 'watching', // Statut en édition
         editTitle: '', // Titre en édition
         editDescription: '', // Synopsis en édition
+        editSeasonInput: '', // Saison en édition (accepte 1, 2.5, 2,5)
         // Note perso
         editMyStarMode: false, // Mode édition note perso
         editMyStarValue: null, // Valeur note perso
@@ -93,6 +107,30 @@ const app = new Vue({
         confirmMessage: '',
     },
     computed: {
+        anilistRateInfo() { // infos calculées (headers HTTP)
+            void this.anilistRateTick;
+
+            const nowSec = Math.floor(Date.now() / 1000);
+            const limit = (this.anilistRate && Number.isFinite(this.anilistRate.limit)) ? this.anilistRate.limit : null;
+            const remaining = (this.anilistRate && Number.isFinite(this.anilistRate.remaining)) ? this.anilistRate.remaining : null;
+            const resetAt = (this.anilistRate && Number.isFinite(this.anilistRate.resetAt)) ? this.anilistRate.resetAt : null;
+            const retryAfterSec = (this.anilistRate && Number.isFinite(this.anilistRate.retryAfterSec)) ? this.anilistRate.retryAfterSec : null;
+
+            const resetInSec = resetAt ? Math.max(0, resetAt - nowSec) : 0;
+
+            const lastStatus = this.anilistRate ? this.anilistRate.lastStatus : null;
+            const lastError = this.anilistRate ? (this.anilistRate.lastError || '') : '';
+
+            return {
+                limit,
+                remaining,
+                resetAt,
+                resetInSec,
+                retryAfterSec,
+                lastStatus,
+                lastError,
+            };
+        },
         filteredAnimes() { // Animes filtrés par recherche
             if (!this.search) return this.animes;
             return this.animes.filter(a => a.title.toLowerCase().includes(this.search.toLowerCase()));
@@ -236,6 +274,17 @@ const app = new Vue({
         },
     },
     methods: {
+        normalizeSeasonInput(value, fallback = null) {
+            if (value === null || typeof value === 'undefined') return fallback;
+            const s = String(value).trim();
+            if (!s) return fallback;
+            const cleaned = s.replace(',', '.');
+            const n = Number(cleaned);
+            if (!Number.isFinite(n) || n <= 0) return fallback;
+            const rounded = Math.round(n);
+            if (Math.abs(n - rounded) < 1e-9) return rounded;
+            return n;
+        },
         // Normalise une chaîne pour la recherche (minuscule, sans accents, espaces propres)
         normalizeSearchText(str) {
             const s = (str || '').toString().trim().toLowerCase();
@@ -597,7 +646,7 @@ const app = new Vue({
                     tags: this.animeFields.tags ? this.animeFields.tags.split(',').map(t=>t.trim()) : [],
                     pics: this.animeFields.pics,
                     description: this.animeFields.description,
-                    season: this.newAnimeSeason ? parseInt(this.newAnimeSeason) : 1,
+                    season: this.normalizeSeasonInput(this.newAnimeSeason, 1),
                     episode: this.newAnimeEpisode ? parseInt(this.newAnimeEpisode) : 0,
                     minute: this.newAnimeMinute ? parseInt(this.newAnimeMinute) : 0,
                     progress_status: this.newAnimeProgressStatus,
@@ -665,6 +714,47 @@ const app = new Vue({
             this.listSearch = '';
             this.listStatusFilters = [];
         },
+        trackAniListRequest() {
+            if (!this.anilistRate) return;
+            const now = Date.now();
+            this.anilistRate.lastRequestAt = now;
+            this.anilistRate.lastError = '';
+            this.anilistRate.lastStatus = null;
+        },
+        trackAniListResponse(res) {
+            if (!this.anilistRate) return;
+            this.anilistRate.lastResponseAt = Date.now();
+            if (res && typeof res.status === 'number') this.anilistRate.lastStatus = res.status;
+
+            // Headers AniList (si exposés via CORS)
+            // - X-RateLimit-Limit
+            // - X-RateLimit-Remaining
+            // - Retry-After (sur 429)
+            // - X-RateLimit-Reset (sur 429)
+            try {
+                const limitRaw = res && res.headers ? res.headers.get('X-RateLimit-Limit') : null;
+                const remainingRaw = res && res.headers ? res.headers.get('X-RateLimit-Remaining') : null;
+                const retryAfterRaw = res && res.headers ? res.headers.get('Retry-After') : null;
+                const resetRaw = res && res.headers ? res.headers.get('X-RateLimit-Reset') : null;
+
+                const limit = limitRaw !== null ? parseInt(limitRaw, 10) : NaN;
+                const remaining = remainingRaw !== null ? parseInt(remainingRaw, 10) : NaN;
+                const retryAfterSec = retryAfterRaw !== null ? parseInt(retryAfterRaw, 10) : NaN;
+                const resetAt = resetRaw !== null ? parseInt(resetRaw, 10) : NaN;
+
+                if (Number.isFinite(limit)) this.anilistRate.limit = limit;
+                if (Number.isFinite(remaining)) this.anilistRate.remaining = remaining;
+                if (Number.isFinite(retryAfterSec)) this.anilistRate.retryAfterSec = retryAfterSec;
+                if (Number.isFinite(resetAt)) this.anilistRate.resetAt = resetAt;
+            } catch (e) {
+                // ignore header parsing errors
+            }
+
+            if (res && res.ok === false) {
+                if (res.status === 429) this.anilistRate.lastError = 'Limite atteinte (HTTP 429)';
+                else this.anilistRate.lastError = `Erreur AniList (HTTP ${res.status})`;
+            }
+        },
         async fetchAnimeSuggestions() { // Suggestions d'animes
             const q = this.newAnimeName.trim();
             if (q.length < 2) { this.animeSuggestions = []; this.animeSuggestionDropdown = false; return; }
@@ -673,16 +763,19 @@ const app = new Vue({
             try {
                 const query = `query ($search: String) { Page(perPage: 6) { media(search: $search, type: ANIME) { id title { romaji } coverImage { medium } } } }`;
                 const variables = { search: q };
+                this.trackAniListRequest();
                 const res = await fetch('https://graphql.anilist.co', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
                     body: JSON.stringify({ query, variables })
                 });
+                this.trackAniListResponse(res);
                 const json = await res.json();
                 this.animeSuggestions = (json.data && json.data.Page && json.data.Page.media) ? json.data.Page.media : [];
                 this.animeSuggestionDropdown = this.animeSuggestions.length > 0;
             } catch (e) {
                 this.animeSuggestionError = 'Erreur AniList';
+                if (this.anilistRate) this.anilistRate.lastError = 'Erreur réseau AniList';
                 this.animeSuggestions = [];
                 this.animeSuggestionDropdown = false;
             } finally {
@@ -696,11 +789,13 @@ const app = new Vue({
             try {
                 const query = `query ($search: String) { Media(search: $search, type: ANIME) { id idMal title { romaji english } description(asHtml: false) episodes status averageScore tags { name } coverImage { medium large } genres } }`;
                 const variables = { search: q };
+                this.trackAniListRequest();
                 const res = await fetch('https://graphql.anilist.co', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
                     body: JSON.stringify({ query, variables })
                 });
+                this.trackAniListResponse(res);
                 const json = await res.json();
                 if (json.data && json.data.Media) {
                     const m = json.data.Media;
@@ -717,6 +812,7 @@ const app = new Vue({
             } catch (e) {
                 // reset fields on error
                 Object.keys(this.animeFields).forEach(k => this.animeFields[k] = '');
+                if (this.anilistRate) this.anilistRate.lastError = 'Erreur réseau AniList';
             } finally {
                 this.animeSuggestionLoading = false;
             }
@@ -761,6 +857,8 @@ const app = new Vue({
             this.editProgressStatus = (anime.progress && anime.progress.status) ? anime.progress.status : 'watching';
             this.editTitle = anime.title || '';
             this.editDescription = anime.description || '';
+            const seasonVal = (anime && typeof anime.season !== 'undefined' && anime.season !== null && anime.season !== '') ? anime.season : 1;
+            this.editSeasonInput = String(seasonVal);
             // reset note perso (évite confusion)
             this.editMyStarMode = false;
             // Cherche other1 dans progress, puis à la racine
@@ -804,6 +902,17 @@ const app = new Vue({
             // Met à jour l'anime dans this.animes
             const idx = this.animes.findIndex(a => a.id === this.selectedAnimeId);
             if (idx !== -1) {
+                // Saison: ne pas corrompre (accepte 1, 2.5, 2,5). Si vide => ne change pas.
+                const seasonStr = (this.editSeasonInput === null || typeof this.editSeasonInput === 'undefined') ? '' : String(this.editSeasonInput).trim();
+                let normalizedSeason = null;
+                if (seasonStr !== '') {
+                    normalizedSeason = this.normalizeSeasonInput(seasonStr, null);
+                    if (normalizedSeason === null) {
+                        this.error = "Saison invalide. Ex: 1, 2.5, 2,5";
+                        return;
+                    }
+                }
+
                 if (!this.animes[idx].progress) this.animes[idx].progress = {};
                 this.animes[idx].progress.episode = this.editProgressEpisode;
                 this.animes[idx].progress.minute = this.editProgressMinute;
@@ -811,11 +920,14 @@ const app = new Vue({
                 this.animes[idx].progress.status = this.editProgressStatus;
                 this.animes[idx].title = this.editTitle;
                 this.animes[idx].description = this.editDescription;
+                if (normalizedSeason !== null) {
+                    this.animes[idx].season = normalizedSeason;
+                }
                 // Met à jour last_view avec la date/heure/minute actuelle
                 this.animes[idx].last_view = Math.floor(Date.now() / 1000);
                 // Enregistre dans data.json via l'API PATCH
                 try {
-                    await patchAnime(this.selectedAnimeId, {
+                    const patchPayload = {
                         title: this.editTitle,
                         description: this.editDescription,
                         progress: {
@@ -825,7 +937,11 @@ const app = new Vue({
                             status: this.editProgressStatus,
                         },
                         last_view: this.animes[idx].last_view
-                    });
+                    };
+                    if (normalizedSeason !== null) {
+                        patchPayload.season = normalizedSeason;
+                    }
+                    await patchAnime(this.selectedAnimeId, patchPayload);
                     // Recharge la liste des animes pour être sûr
                     await this.fetchAnimes();
                 } catch (e) {
@@ -889,6 +1005,11 @@ const app = new Vue({
         this.fetchLists();
         // Initialisation du thème au montage
         document.documentElement.setAttribute('data-theme', localStorage.getItem('theme') || 'light');
+
+        // Tick simple pour rafraîchir l'info de limite AniList (compte à rebours)
+        window.setInterval(() => {
+            this.anilistRateTick = (this.anilistRateTick + 1) % 1_000_000;
+        }, 1000);
     },
     template: `
     <div>
@@ -991,109 +1112,144 @@ const app = new Vue({
             </div>
         </div>
         <div v-else-if="currentView === 'addAnime'">
-            <div class="modal-create-list">
+            <div class="modal-create-list add-anime-modal">
                 <button class="list-btn" style="float:right;" @click="setView('list')">Annuler</button>
                 <h2>Ajouter un anime</h2>
-                <div class="create-list-section">
-                    <label>Nom de l'anime :</label>
-                    <div style="display:flex; gap:8px; align-items:center; position:relative;">
-                        <input type="text" v-model="newAnimeName" placeholder="Nom de l'anime..." style="margin-bottom:12px; flex:1;" autocomplete="off" @focus="animeSuggestionDropdown = animeSuggestions.length > 0" @blur="handleAnimeInputBlur" />
-                        <button class="list-btn" style="padding:6px 12px;" @click.prevent="fetchAnimeInfo">🔍</button>
-                        <div v-if="animeSuggestionDropdown" class="suggestion-dropdown"
-                            :style="{
-                                position: 'absolute',
-                                left: 0,
-                                right: 0,
-                                top: '38px',
-                                zIndex: 20,
-                                background: isDarkTheme ? '#23272a' : '#fff',
-                                color: isDarkTheme ? '#f5f5f5' : '#23272a',
-                                border: '1px solid #ccc',
-                                borderRadius: '6px',
-                                boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
-                            }">
-                            <div v-if="animeSuggestionLoading" :style="{padding:'8px', color:'#888'}">Chargement...</div>
-                            <div v-else-if="animeSuggestions.length === 0" :style="{padding:'8px', color:'#888'}">Aucun résultat</div>
-                            <div v-else>
-                                <div v-for="s in animeSuggestions" :key="s.id" @mousedown.prevent="selectAnimeSuggestion(s)"
+                <div class="add-anime-layout">
+                    <div class="add-anime-form">
+                        <div
+                            class="anilist-rate-box"
+                            :class="{ 'is-warning': anilistRateInfo.lastStatus === 429 || anilistRateInfo.remaining === 0 }"
+                            aria-label="Infos limite AniList"
+                        >
+                            <div class="anilist-rate-title">AniList API (limite)</div>
+                            <div class="anilist-rate-line">
+                                <template v-if="anilistRateInfo.limit !== null && anilistRateInfo.remaining !== null">
+                                    <strong>{{ anilistRateInfo.remaining }}</strong> restantes / {{ anilistRateInfo.limit }}
+                                </template>
+                                <template v-else>
+                                    <strong>—</strong> (fais une requête AniList)
+                                </template>
+                            </div>
+                            <div v-if="anilistRateInfo.resetAt" class="anilist-rate-line">Reset ~ {{ anilistRateInfo.resetInSec }}s</div>
+                            <div v-else-if="anilistRateInfo.retryAfterSec" class="anilist-rate-line">Retry-After: {{ anilistRateInfo.retryAfterSec }}s</div>
+                            <div v-if="anilistRateInfo.lastStatus" class="anilist-rate-line">Dernier status: {{ anilistRateInfo.lastStatus }}</div>
+                            <div v-if="anilistRateInfo.lastError" class="anilist-rate-error">{{ anilistRateInfo.lastError }}</div>
+                            <div class="anilist-rate-note">Données lues depuis les headers (X-RateLimit-* / Retry-After).</div>
+                        </div>
+                        <div class="create-list-section">
+                            <label>Nom de l'anime :</label>
+                            <div style="display:flex; gap:8px; align-items:center; position:relative;">
+                                <input type="text" v-model="newAnimeName" placeholder="Nom de l'anime..." style="margin-bottom:12px; flex:1;" autocomplete="off" @focus="animeSuggestionDropdown = animeSuggestions.length > 0" @blur="handleAnimeInputBlur" />
+                                <button class="list-btn" style="padding:6px 12px;" @click.prevent="fetchAnimeInfo">🔍</button>
+                                <div v-if="animeSuggestionDropdown" class="suggestion-dropdown"
                                     :style="{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '8px',
-                                        padding: '8px',
-                                        cursor: 'pointer',
-                                        borderBottom: '1px solid #eee',
+                                        position: 'absolute',
+                                        left: 0,
+                                        right: 0,
+                                        top: '38px',
+                                        zIndex: 20,
+                                        background: isDarkTheme ? '#23272a' : '#fff',
                                         color: isDarkTheme ? '#f5f5f5' : '#23272a',
-                                        background: 'transparent'
+                                        border: '1px solid #ccc',
+                                        borderRadius: '6px',
+                                        boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
                                     }">
-                                    <img :src="s.coverImage.medium" alt="cover" style="width:36px; height:36px; object-fit:cover; border-radius:4px;" />
-                                    <span>{{ s.title.romaji }}</span>
+                                    <div v-if="animeSuggestionLoading" :style="{padding:'8px', color:'#888'}">Chargement...</div>
+                                    <div v-else-if="animeSuggestions.length === 0" :style="{padding:'8px', color:'#888'}">Aucun résultat</div>
+                                    <div v-else>
+                                        <div v-for="s in animeSuggestions" :key="s.id" @mousedown.prevent="selectAnimeSuggestion(s)"
+                                            :style="{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '8px',
+                                                padding: '8px',
+                                                cursor: 'pointer',
+                                                borderBottom: '1px solid #eee',
+                                                color: isDarkTheme ? '#f5f5f5' : '#23272a',
+                                                background: 'transparent'
+                                            }">
+                                            <img :src="s.coverImage.medium" alt="cover" style="width:36px; height:36px; object-fit:cover; border-radius:4px;" />
+                                            <span>{{ s.title.romaji }}</span>
+                                        </div>
+                                    </div>
                                 </div>
+                                <img v-if="animeSuggestionSelected && animeSuggestionSelected.image" :src="animeSuggestionSelected.image" alt="cover" style="width:48px; height:48px; object-fit:cover; border-radius:6px; margin-left:12px;" />
+                            </div>
+                            <div v-if="doublonCount > 0" style="color:#d9534f; font-size:0.95em; margin-top:2px;">{{ doublonCount }} doublon{{ doublonCount > 1 ? 's' : '' }} trouvé{{ doublonCount > 1 ? 's' : '' }}</div>
+                        </div>
+                        <div class="create-list-section">
+                            <label>Liste :</label>
+                            <select v-model="newAnimeListId" style="margin-bottom:12px; width:100%; padding:8px; border-radius:6px; border:1px solid #ccc;">
+                                <option v-for="list in lists" :key="list.id" :value="list.id">{{ list.name }}</option>
+                            </select>
+                        </div>
+                        <div class="create-list-section">
+                            <label>Progression (facultatif) :</label>
+                            <div style="display:flex; gap:8px; align-items:center;">
+                                <input type="text" v-model="newAnimeSeason" inputmode="decimal" placeholder="Saison" style="width:70px;" />
+                                <input type="number" v-model="newAnimeEpisode" min="1" placeholder="Épisode" style="width:90px;" />
+                                <input type="number" v-model="newAnimeMinute" min="0" placeholder="Minute" style="width:90px;" />
                             </div>
                         </div>
-                        <img v-if="animeSuggestionSelected && animeSuggestionSelected.image" :src="animeSuggestionSelected.image" alt="cover" style="width:48px; height:48px; object-fit:cover; border-radius:6px; margin-left:12px;" />
+                        <div class="create-list-section">
+                            <label>Statut (visionnage) :</label>
+                            <div style="display:flex; flex-wrap:wrap; gap:6px;">
+                                <button
+                                    v-for="opt in progressStatusOptions"
+                                    :key="opt.value"
+                                    type="button"
+                                    @click="newAnimeProgressStatus = opt.value"
+                                    :style="{
+                                        padding: '6px 10px',
+                                        borderRadius: '999px',
+                                        border: '1px solid ' + (newAnimeProgressStatus === opt.value ? '#4f8cff' : '#ccc'),
+                                        background: newAnimeProgressStatus === opt.value ? '#4f8cff' : (isDarkTheme ? '#23272a' : '#fff'),
+                                        color: newAnimeProgressStatus === opt.value ? '#fff' : (isDarkTheme ? '#f5f5f5' : '#23272a'),
+                                        cursor: 'pointer',
+                                        fontSize: '0.95rem'
+                                    }"
+                                >
+                                    {{ opt.label }}
+                                </button>
+                            </div>
+                        </div>
+                        <!-- Bloc info sur l'anime -->
+                        <div :style="{
+                            margin: '24px 0 0 0',
+                            padding: '16px',
+                            background: isDarkTheme ? '#23272a' : '#f7f7f7',
+                            borderRadius: '8px',
+                            border: '1px solid #eee',
+                            color: isDarkTheme ? '#f5f5f5' : '#23272a'
+                        }">
+                            <h3 style="margin-top:0; margin-bottom:12px; font-size:1.15rem; font-weight:600;">info sur l'anime</h3>
+                            <div>id_anilist: <input type="text" v-model="animeFields.id_anilist" style="width:90%;" /></div>
+                            <div>title: <input type="text" v-model="animeFields.title" style="width:90%;" /></div>
+                            <div>title_romaji: <input type="text" v-model="animeFields.title_romaji" style="width:90%;" /></div>
+                            <div>episodes: <input type="text" v-model="animeFields.episodes" style="width:90%;" /></div>
+                            <div>status: <input type="text" v-model="animeFields.status" style="width:90%;" /></div>
+                            <div>star: <input type="text" v-model="animeFields.star" style="width:90%;" /></div>
+                            <div>tags: <input type="text" v-model="animeFields.tags" style="width:90%;" /></div>
+                            <div>pics: <input type="text" v-model="animeFields.pics" style="width:90%;" /></div>
+                            <div>description: <input type="text" v-model="animeFields.description" style="width:90%;" /></div>
+                            <div>autres : <input type="text" v-model="animeFields.other1" style="width:90%;" placeholder="Notes, liens, etc..." /></div>
+                        </div>
+                        <div style="margin-top:32px; text-align:center;">
+                            <button class="list-btn" style="width:180px;" @click="handleAddAnime">Valider</button>
+                        </div>
                     </div>
-                    <div v-if="doublonCount > 0" style="color:#d9534f; font-size:0.95em; margin-top:2px;">{{ doublonCount }} doublon{{ doublonCount > 1 ? 's' : '' }} trouvé{{ doublonCount > 1 ? 's' : '' }}</div>
-                </div>
-                <div class="create-list-section">
-                    <label>Liste :</label>
-                    <select v-model="newAnimeListId" style="margin-bottom:12px; width:100%; padding:8px; border-radius:6px; border:1px solid #ccc;">
-                        <option v-for="list in lists" :key="list.id" :value="list.id">{{ list.name }}</option>
-                    </select>
-                </div>
-                <div class="create-list-section">
-                    <label>Progression (facultatif) :</label>
-                    <div style="display:flex; gap:8px; align-items:center;">
-                        <input type="number" v-model="newAnimeSeason" min="1" placeholder="Saison" style="width:70px;" />
-                        <input type="number" v-model="newAnimeEpisode" min="1" placeholder="Épisode" style="width:90px;" />
-                        <input type="number" v-model="newAnimeMinute" min="0" placeholder="Minute" style="width:90px;" />
+                    <div
+                        v-if="(animeFields && animeFields.pics) || (animeSuggestionSelected && animeSuggestionSelected.image)"
+                        class="add-anime-preview"
+                        aria-label="Aperçu de l'anime"
+                    >
+                        <img
+                            class="add-anime-cover"
+                            :src="(animeFields && animeFields.pics) ? animeFields.pics : animeSuggestionSelected.image"
+                            :alt="(animeFields && animeFields.title) ? animeFields.title : (animeSuggestionSelected ? animeSuggestionSelected.title : 'cover')"
+                        />
                     </div>
-                </div>
-                <div class="create-list-section">
-                    <label>Statut (visionnage) :</label>
-                    <div style="display:flex; flex-wrap:wrap; gap:6px;">
-                        <button
-                            v-for="opt in progressStatusOptions"
-                            :key="opt.value"
-                            type="button"
-                            @click="newAnimeProgressStatus = opt.value"
-                            :style="{
-                                padding: '6px 10px',
-                                borderRadius: '999px',
-                                border: '1px solid ' + (newAnimeProgressStatus === opt.value ? '#4f8cff' : '#ccc'),
-                                background: newAnimeProgressStatus === opt.value ? '#4f8cff' : (isDarkTheme ? '#23272a' : '#fff'),
-                                color: newAnimeProgressStatus === opt.value ? '#fff' : (isDarkTheme ? '#f5f5f5' : '#23272a'),
-                                cursor: 'pointer',
-                                fontSize: '0.95rem'
-                            }"
-                        >
-                            {{ opt.label }}
-                        </button>
-                    </div>
-                </div>
-                <!-- Bloc info sur l'anime -->
-                <div :style="{
-                    margin: '24px 0 0 0',
-                    padding: '16px',
-                    background: isDarkTheme ? '#23272a' : '#f7f7f7',
-                    borderRadius: '8px',
-                    border: '1px solid #eee',
-                    color: isDarkTheme ? '#f5f5f5' : '#23272a'
-                }">
-                    <h3 style="margin-top:0; margin-bottom:12px; font-size:1.15rem; font-weight:600;">info sur l'anime</h3>
-                    <div>id_anilist: <input type="text" v-model="animeFields.id_anilist" style="width:90%;" /></div>
-                    <div>title: <input type="text" v-model="animeFields.title" style="width:90%;" /></div>
-                    <div>title_romaji: <input type="text" v-model="animeFields.title_romaji" style="width:90%;" /></div>
-                    <div>episodes: <input type="text" v-model="animeFields.episodes" style="width:90%;" /></div>
-                    <div>status: <input type="text" v-model="animeFields.status" style="width:90%;" /></div>
-                    <div>star: <input type="text" v-model="animeFields.star" style="width:90%;" /></div>
-                    <div>tags: <input type="text" v-model="animeFields.tags" style="width:90%;" /></div>
-                    <div>pics: <input type="text" v-model="animeFields.pics" style="width:90%;" /></div>
-                    <div>description: <input type="text" v-model="animeFields.description" style="width:90%;" /></div>
-                    <div>autres : <input type="text" v-model="animeFields.other1" style="width:90%;" placeholder="Notes, liens, etc..." /></div>
-                </div>
-                <div style="margin-top:32px; text-align:center;">
-                    <button class="list-btn" style="width:180px;" @click="handleAddAnime">Valider</button>
                 </div>
             </div>
         </div>
@@ -1226,6 +1382,13 @@ const app = new Vue({
                                         {{ opt.label }}
                                     </button>
                                 </div>
+                            </span>
+                        </div>
+                        <div style="margin-bottom:12px;">
+                            <span style="font-weight:600; color:#888;">Saison :</span>
+                            <span v-if="!editProgressMode">{{ (typeof getAnime(selectedAnimeId).season !== 'undefined' && getAnime(selectedAnimeId).season !== null && getAnime(selectedAnimeId).season !== '') ? getAnime(selectedAnimeId).season : 1 }}</span>
+                            <span v-else>
+                                <input type="text" v-model="editSeasonInput" inputmode="decimal" style="width:90px;" placeholder="1 / 2,5" />
                             </span>
                         </div>
                         <div style="margin-bottom:12px;">

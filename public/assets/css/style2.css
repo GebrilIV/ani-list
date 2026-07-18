@@ -481,6 +481,80 @@ body {
   padding: 32px 28px 24px 28px;
   border: 1.5px solid var(--color-accent);
 }
+
+/* Add Anime: aperçu image (style2 = mobile) */
+.add-anime-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.add-anime-preview {
+  order: -1;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.add-anime-cover {
+  width: 100%;
+  max-width: 220px;
+  height: auto;
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
+  border-radius: 12px;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.14);
+  border: 1px solid rgba(0,0,0,0.08);
+}
+
+[data-theme="dark"] .add-anime-cover {
+  border-color: rgba(255,255,255,0.10);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.35);
+}
+
+/* Add Anime: infos limite AniList */
+.anilist-rate-box {
+  margin: 6px 0 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(0,0,0,0.10);
+  background: rgba(79, 140, 255, 0.06);
+}
+
+[data-theme="dark"] .anilist-rate-box {
+  border-color: rgba(255,255,255,0.10);
+  background: rgba(79, 140, 255, 0.10);
+}
+
+.anilist-rate-box.is-warning {
+  border-color: rgba(217, 83, 79, 0.75);
+  background: rgba(217, 83, 79, 0.06);
+}
+
+.anilist-rate-title {
+  font-weight: 650;
+  margin-bottom: 6px;
+}
+
+.anilist-rate-line {
+  font-size: 0.95rem;
+}
+
+.anilist-rate-note {
+  margin-top: 6px;
+  font-size: 0.85rem;
+  color: #888;
+}
+
+[data-theme="dark"] .anilist-rate-note {
+  color: #9aa0a6;
+}
+
+.anilist-rate-error {
+  margin-top: 6px;
+  color: #d9534f;
+  font-weight: 600;
+}
 .create-list-section {
   margin-bottom: 18px;
 }
